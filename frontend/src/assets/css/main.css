@@ -57,6 +57,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-left: 10px;
 }
 
 .map-box {
@@ -119,11 +120,27 @@
 
 /* HEADER */
 .dropdown-header {
+  display: flex;
+  justify-content: space-between;
   padding: 10px;
+  align-items: center;
   cursor: pointer;
   color: white; 
   border: 1px solid #2689E6;
   background: #439AEB;
+}
+
+
+.arrow {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s ease; 
+  transform-origin: center;        
+}
+
+/* поворот */
+.arrow.rotate {
+  transform: rotate(180deg);
 }
 
 /* CLOSED */
@@ -187,6 +204,20 @@
 .dropdown-body::-webkit-scrollbar-thumb {
   background: #439AEB;
   border-radius: 10px;
+}
+
+.spots-list::-webkit-scrollbar {
+  width: 10px;
+  border-radius: 10px;
+  background: white;
+  border: 2px solid #439AEB;
+}
+
+.spots-list::-webkit-scrollbar-thumb {
+  background: #439AEB;
+  border-radius: 10px;
+  border: 2px solid transparent;  
+  background-clip: content-box;
 }
 
 /* ITEMS */

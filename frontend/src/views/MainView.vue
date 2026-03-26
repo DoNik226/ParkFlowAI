@@ -46,7 +46,12 @@
               :class="['left', { open: showParking }]"
               @click="toggleParking"
             >
-              Парковки ⌵
+              <span>Парковки</span>
+              <img 
+                src="../assets/img/down-arrow.png" 
+                class="arrow"
+                :class="{ rotate: showParking }"
+              >
             </div>
 
             <div 
@@ -83,7 +88,12 @@
               :class="['right', { open: showEntrance }]"
               @click="toggleEntrance"
             >
-              № въезда ⌵
+              <span>№ въезда</span>
+              <img 
+                src="../assets/img/down-arrow.png" 
+                class="arrow"
+                :class="{ rotate: showEntrance }"
+              >
             </div>
 
             <div 
@@ -143,7 +153,7 @@ import { ref } from 'vue'
 const showParking = ref(false)
 const showEntrance = ref(false)
 
-const parkings = ['P1', 'P2']
+const parkings = ['Парковка 1', 'Парковка 2']
 const entrances = ['1', '2']
 
 const selectedParking = ref(null)
