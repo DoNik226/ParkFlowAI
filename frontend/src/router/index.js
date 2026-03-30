@@ -1,11 +1,25 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import MainView from '../views/MainView.vue'
+import AdminView from '../views/AdminView.vue'
 
 const routes = [
   {
     path: '/',
-    name: 'home',
-    component: MainView
+    component: () => import('../views/MainView.vue')
+  },
+
+  {
+    path: '/admin',
+    component: AdminView,
+    children: [
+      {
+        path: 'users',
+        component: () => import('../components/admin/UserManagement.vue')
+      },
+      {
+        path: 'parkings',
+        component: () => import('../components/admin/CameraManagement.vue')
+      }
+    ]
   }
 ]
 
