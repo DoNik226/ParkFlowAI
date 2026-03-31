@@ -100,8 +100,8 @@
         <button class="close-btn" @click="closePasswordModal">
             ✖
         </button>
-        <p>Введите новый пароль</p>
-        <input v-model="newPassword" class="input" />
+        <p style="color: #3B66F4">Введите новый пароль</p>
+        <input v-model="newPassword" class="form-input" />
 
         <button class="save-half" @click="savePassword">
           Сохранить
