@@ -7,7 +7,13 @@
 
       <div class="right">
         <span>admin</span>
-        <button class="logout">
+        <!-- если НЕ главная админка -->
+        <button v-if="$route.path !== '/admin'" @click="$router.push('/admin')" class="logout">
+          <img src="../assets/img/back.png" width="30">
+        </button>
+
+        <!-- если главная -->
+        <button v-else class="logout">
           <img src="../assets/img/sign-out.png" width="30">
         </button>
       </div>
@@ -16,7 +22,7 @@
     <!-- CONTENT -->
     <div class="admin-content">
 
-      <div class="admin-buttons">
+      <div v-if="$route.path === '/admin'" class="admin-buttons">
 
         <div class="admin-item" @click="goUsers">
             <div class="admin-card">
