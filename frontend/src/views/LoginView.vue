@@ -41,6 +41,11 @@
           {{ errorMessage }}
         </div>
 
+        <!-- Сообщение об успехе (показывается только если есть сообщение об успехе) -->
+        <div v-if="successMessage" class="alert alert-success">
+          {{ successMessage }}
+        </div>
+
         <!-- Кнопка восстановления пароля -->
         <div class="button-group">
           <button type="button" class="btn-forgot" @click="handleForgotPassword">
@@ -74,7 +79,9 @@ export default {
       // Флаг загрузки (блокировка кнопки во время запроса)
       isLoading: false,
       // Текст ошибки для отображения
-      errorMessage: ''
+      errorMessage: '',
+      // Текст успешного сообщения
+      successMessage: ''
     }
   },
   methods: {
@@ -82,6 +89,7 @@ export default {
     async handleLogin() {
       this.isLoading = true
       this.errorMessage = ''
+      this.successMessage = '' // Очищаем сообщение об успехе при входе
 
       try {
         // Запрос к API авторизации
@@ -113,6 +121,10 @@ export default {
 
     // Обработка запроса на восстановление пароля
     async handleForgotPassword() {
+      // Очищаем предыдущие сообщения
+      this.errorMessage = ''
+      this.successMessage = ''
+      
       if (!this.form.username) {
         this.errorMessage = 'Введите логин для восстановления пароля.'
         return
@@ -120,7 +132,13 @@ export default {
       
       try {
         await authService.forgotPassword(this.form.username)
-        alert('Новый пароль отправлен на электронную почту.')
+        // Показываем зеленое сообщение об успехе
+        this.successMessage = 'Заявка отправлена администратору'
+        
+        // Опционально: очистить сообщение через 5 секунд
+        setTimeout(() => {
+          this.successMessage = ''
+        }, 5000)
       } catch (error) {
         this.errorMessage = 'Ошибка при запросе сброса пароля.'
       }
@@ -256,5 +274,12 @@ export default {
   background-color: #fee;
   color: #c33;
   border: 1px solid #fcc;
+}
+
+/* Зеленое сообщение об успехе */
+.alert-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
 }
 </style>
