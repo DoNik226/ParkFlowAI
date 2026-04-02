@@ -11,7 +11,7 @@
 
       <div class="user-info">
         <span>ID пользователя: 12345</span>
-        <button class="logout">
+        <button class="logout" @click="openLogoutModal">
             <img src="../assets/img/sign-out.png" alt="Выход" width="30" height="30">
         </button>
 
@@ -145,10 +145,44 @@
 
     </div>
   </div>
+  <!-- LOGOUT MODAL -->
+  <div v-if="showLogoutModal" class="modal">
+    <div class="modal-content">
+      <p>Вы уверены, что хотите выйти?</p>
+
+      <div class="modal-actions">
+        
+        <button class="cancel-btn" @click="cancelLogout">Нет</button>
+        <button class="confirm-btn" @click="confirmLogout">Да</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const showLogoutModal = ref(false)
+
+const openLogoutModal = () => {
+  showLogoutModal.value = true
+}
+
+const cancelLogout = () => {
+  showLogoutModal.value = false
+}
+
+const confirmLogout = () => {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('user_role')
+
+  showLogoutModal.value = false
+
+  router.push('/login')
+}
 
 const showParking = ref(false)
 const showEntrance = ref(false)
