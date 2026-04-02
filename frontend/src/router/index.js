@@ -5,9 +5,14 @@ import LoginView from '../views/LoginView.vue'
 const routes = [
   // 1. Страница входа (без защиты)
   {
-    path: '/',
+    path: '/login',
     name: 'Login',
     component: LoginView,
+  },
+
+  {
+    path: '/',
+    redirect: '/main' 
   },
   
   // 2. Главная страница (требуется авторизация)
@@ -48,16 +53,19 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('access_token')
   const role = localStorage.getItem('user_role')
 
-  if (to.meta.requiresAuth && !token) {
-    // Если нужен вход, но токена нет -> на страницу логина
-    next('/')
-  } else if (to.meta.role && to.meta.role !== role) {
-    // Если роль не совпадает -> на страницу логина
-    next('/')
-  } else {
-    // Всё ок -> пропускаем
-    next()
+  if (!token && to.path !== '/login') {
+    return next('/login')
   }
+
+  if (token && to.path === '/login') {
+    return role === 'admin' ? next('/admin') : next('/main')
+  }
+
+  if (to.meta.role && to.meta.role !== role) {
+    return next('/main')
+  }
+
+  next()
 })
 
 export default router
