@@ -625,7 +625,7 @@ export default {
 }
 
 .editor-btn {
-  background-color: #6FA8DC;
+  background-color: #2689E6;
   color: white;
   border: none;
   padding: 10px 25px;
@@ -635,13 +635,13 @@ export default {
 }
 
 .editor-btn:hover {
-  background-color: #5A98CB;
+  background-color: #2689E6;
 }
 
 .collapse-btn {
   background: none;
   border: none;
-  color: #4A90E2;
+  color: #2689E6;
   font-size: 18px;
   cursor: pointer;
   padding: 5px 10px;
@@ -727,7 +727,7 @@ export default {
 }
 
 .add-camera-btn {
-  background-color: #4A90E2;
+  background-color: #2689E6;
   color: white;
   border: none;
   padding: 12px 30px;
@@ -737,7 +737,7 @@ export default {
 }
 
 .add-parking-btn {
-  background-color: #6FA8DC;
+  background-color: #2689E6;
   color: white;
   border: none;
   padding: 15px 40px;
@@ -784,7 +784,7 @@ export default {
 
 .modal-header h3 {
   margin: 0;
-  color: #4A90E2;
+  color: #2689E6;
   font-size: 20px;
 }
 
@@ -858,7 +858,7 @@ export default {
 
 .camera-name {
   font-weight: 600;
-  color: #4A90E2;
+  color: #2689E6;
 }
 
 .delete-footer {
@@ -919,7 +919,7 @@ export default {
 }
 
 .form-input:focus {
-  border-bottom-color: #4A90E2;
+  border-bottom-color: #2689E6;
 }
 
 .form-input.input-error {
@@ -943,12 +943,12 @@ export default {
 }
 
 .btn-save {
-  background-color: #4A90E2;
+  background-color: #2689E6;
   color: white;
 }
 
 .btn-save:hover {
-  background-color: #3A7BC8;
+  background-color: #2689E6;
 }
 
 .btn-cancel {
