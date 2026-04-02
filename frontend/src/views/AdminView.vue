@@ -61,5 +61,5 @@ const router = useRouter()
 
 const goUsers = () => router.push('/admin/users')
 const goParkings = () => router.push('/admin/parkings')
-const goApp = () => router.push('/')
+const goApp = () => router.push('/main')
 </script>

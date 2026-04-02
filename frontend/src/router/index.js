@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AdminView from '../views/AdminView.vue'
 import LoginView from '../views/LoginView.vue'
+import ParkingView from '../views/ParkingView.vue'
+
 
 const routes = [
   // 1. Страница входа (без защиты)
@@ -32,10 +34,11 @@ const routes = [
       },
       {
         path: 'parkings',
-        component: () => import('../components/admin/CameraManagement.vue')
-      }
+        component: () => import('../views/ParkingView.vue')
+      }, 
     ]
-  }
+  }, 
+  
 ]
 
 const router = createRouter({
