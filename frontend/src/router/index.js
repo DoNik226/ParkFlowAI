@@ -14,7 +14,9 @@ const routes = [
 
   {
     path: '/',
-    redirect: '/main' 
+    beforeEnter: (to, from, next) => {
+      isMobile() ? next('/m') : next('/main')
+    } 
   },
   
   // 2. Главная страница (требуется авторизация)
@@ -43,6 +45,12 @@ const routes = [
       }, 
     ]
   }, 
+
+  {
+    path: '/m',
+    name: 'MobileMain',
+    component: () => import('../views/MobileMainView.vue')
+  },
   
 ]
 
@@ -51,11 +59,33 @@ const router = createRouter({
   routes
 })
 
+const isMobile = () => {
+  return window.innerWidth <= 768 || /Android|iPhone/i.test(navigator.userAgent)
+}
+
 // 4. Защита маршрутов (Navigation Guard)
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('access_token')
   const role = localStorage.getItem('user_role')
 
+  const mobile = isMobile()
+
+  // 📱 всегда уводим на мобильную
+  if (mobile && to.path !== '/m') {
+    return next('/m')
+  }
+
+  // 💻 запрещаем мобильную страницу на десктопе
+  if (!mobile && to.path === '/m') {
+    return next('/main')
+  }
+
+  // 📱 мобильная версия без авторизации
+  if (mobile) {
+    return next()
+  }
+
+  // --- десктоп логика ---
   if (!token && to.path !== '/login') {
     return next('/login')
   }
