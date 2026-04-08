@@ -17,24 +17,22 @@
 
     <!-- BOTTOM PANEL -->
     <div class="bottom-panel">
-      <button class="icon-btn-mobile">
-        <img src="../assets/img/sign-out.png"/>
+      <button class="logout" @click="openLogoutModal">
+        <img src="../assets/img/sign-out-black.png"/>
       </button>
 
       <button class="route-btn-mobile">Маршрут</button>
 
-      <button class="icon-btn-mobile" @click="openMenu">☰</button>
+      <button :style="{fontSize: '30px'}" class="icon-btn-mobile" @click="openMenu">☰</button>
     </div>
 
     <!-- MENU -->
     <div class="menu" :class="{ open: menuOpen }">
 
       <!-- HEADER -->
-      <div class="menu-header">
-        <button class="back-mobile" @click="closeMenu">
-            <img src="../assets/img/back.png">
-        </button>
-        <span>Сохранить и выйти</span>
+      <div class="menu-header" @click="closeMenu">
+            <img class="back-icon" src="../assets/img/back.png">
+        <span :style="{fontSize: '20px'}">Сохранить и выйти</span>
       </div>
 
       <!-- DROPDOWNS -->
@@ -43,7 +41,11 @@
         <div class="dropdown">
           <div class="dropdown-header" @click="toggleParking">
             <span>Парковка</span>
-            <span>{{ showParking ? '▲' : '▼' }}</span>
+            <img 
+                src="../assets/img/down-arrow.png" 
+                class="arrow"
+                :class="{ rotate: showParking }"
+              >
           </div>
 
           <div v-if="showParking" class="dropdown-body">
@@ -59,7 +61,11 @@
         <div class="dropdown">
           <div class="dropdown-header" @click="toggleEntrance">
             <span>№ въезда</span>
-            <span>{{ showEntrance ? '▲' : '▼' }}</span>
+            <img 
+                src="../assets/img/down-arrow.png" 
+                class="arrow"
+                :class="{ rotate: showEntrance }"
+              >
           </div>
 
           <div v-if="showEntrance" class="dropdown-body">
@@ -85,7 +91,8 @@
             :class="['spot-btn', { active: selectedSpot === spot.id }]"
             @click="selectSpot(spot.id)"
           >
-            {{ spot.name }}
+            <div class="spot-number">{{ spot.entrance }}</div>
+            <div class="spot-distance">{{ spot.distance }} метров</div>
           </button>
         </div>
       </div>
@@ -93,10 +100,44 @@
     </div>
 
   </div>
+
+  <div v-if="showLogoutModal" class="modal" @click="cancelLogout">
+    <div class="modal-content" @click.stop>
+      <p>Вы уверены, что хотите выйти?</p>
+
+      <div class="modal-actions">
+        
+        <button class="cancel-btn" @click="cancelLogout">Нет</button>
+        <button class="confirm-btn" @click="confirmLogout">Да</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+
+import { useRouter } from 'vue-router'
+
+const showLogoutModal = ref(false)   
+const router = useRouter()
+
+const openLogoutModal = () => {
+  showLogoutModal.value = true
+}
+
+const cancelLogout = () => {
+  showLogoutModal.value = false
+}
+
+const confirmLogout = () => {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('user_role')
+
+  showLogoutModal.value = false
+
+  router.push('/login')
+}
 
 const menuOpen = ref(false)
 
@@ -116,11 +157,11 @@ const selectedParking = ref(null)
 const selectedEntrance = ref(null)
 
 const spots = ref([
-  { id: 1, name: 'A1' },
-  { id: 2, name: 'A2' },
-  { id: 3, name: 'A3' },
-  { id: 4, name: 'B1' },
-  { id: 5, name: 'B2' }
+  { id: 1, entrance: 30, distance: 20 },
+  { id: 2, entrance: 18, distance: 24 },
+  { id: 3, entrance: 32, distance: 26 },
+  { id: 4, entrance: 40, distance: 35 },
+  { id: 5, entrance: 42, distance: 38 }
 ])
 
 const selectedSpot = ref(null)
@@ -156,8 +197,9 @@ const selectSpot = (id) => selectedSpot.value = id
   transform: translateX(-50%);
   background: white;
   padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid black;
+  border-radius: 10px;
+  border: 1px solid #555252;
+  opacity: 0.6;
 }
 
 .zoom-controls {
@@ -169,9 +211,12 @@ const selectSpot = (id) => selectedSpot.value = id
 }
 
 .zoom-controls button {
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   margin: 4px 0;
+  border-radius: 24px;
+  background: white;
+  opacity: 0.7;
 }
 
 /* BOTTOM */
@@ -193,9 +238,9 @@ const selectSpot = (id) => selectedSpot.value = id
   width: 190px;
   height: 50px; 
   border-radius: 10px;
-  background: #439AEB;
-  color: white;
-  border: none;
+  background: #D9D9D9;
+  color: black;
+  border: 1px solid #555252;
   font-size: 24px;
   line-height: normal;
   display: flex;
@@ -207,9 +252,9 @@ const selectSpot = (id) => selectedSpot.value = id
 .icon-btn-mobile {
   width: 50px;        
   height: 50px;               
-  border: 1px solid black;
+  border: 1px solid #555252;
   border-radius: 10px;
-  background: grey;
+  background: #D9D9D9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -217,10 +262,46 @@ const selectSpot = (id) => selectedSpot.value = id
 }
 
 .icon-btn-mobile img {
-  width: 34px;        
-  height: 34px;
+  width: 30px;        
+  height: 30px;
   object-fit: contain;
   display: block;
+}
+
+.logout {
+  width: 50px;        
+  height: 50px;               
+  border: 1px solid #555252;
+  border-radius: 10px;
+  background: #D9D9D9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+}
+
+.logout img {
+  width: 30px;        
+  height: 30px;
+  object-fit: contain;
+  display: block;
+}
+
+/* .modal-content {
+  border: 3px solid #376CFB;
+} */
+
+.modal-content p{
+  color: #2689E6;
+}
+
+.confirm-btn{ 
+  background: #439AEB;
+}
+
+.cancel-btn {
+  background: #EB5743;
+  color: white;
 }
 
 /* MENU */
@@ -248,20 +329,17 @@ const selectSpot = (id) => selectedSpot.value = id
   display: flex;
   align-items: center;
   padding: 0 15px;
-  border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid #1575CF;
   color: white;
 }
 
-.back-mobile {
+.back-icon {
     background: none;
     border: none;
     margin-right: 20px;
+    height: 40px;
 }
 
-.back-mobile img {
-    height: 40px;
-    width: 40px;
-}
 
 /* DROPDOWNS */
 .dropdowns {
@@ -271,7 +349,7 @@ const selectSpot = (id) => selectedSpot.value = id
 
 .dropdown {
   flex: 1;
-  border-right: 1px solid #eee;
+  border-right: 1px solid #1575CF;
   position: relative;
 }
 
@@ -283,6 +361,7 @@ const selectSpot = (id) => selectedSpot.value = id
   padding: 15px;
   display: flex;
   justify-content: space-between;
+  background: #2673E6;
 }
 
 /* FIXED DROPDOWN SIZE */
@@ -292,8 +371,8 @@ const selectSpot = (id) => selectedSpot.value = id
   width: 100%;
   height: 100px;
   overflow-y: auto;
-  background: white;
-  border: 1px solid #ccc;
+  background: #f5f7f7;
+  border: 1px solid #1575CF;
   z-index: 10;
 }
 
@@ -301,6 +380,7 @@ const selectSpot = (id) => selectedSpot.value = id
   padding: 12px 15px;
   display: flex;
   justify-content: space-between;
+  border: 1px solid #1575CF;
 }
 
 /* SPOTS */
@@ -309,20 +389,24 @@ const selectSpot = (id) => selectedSpot.value = id
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 80px 10px 0 10px;
+  padding: 80px 20px 0 10px;
 }
 
 .spots h3 {
     justify-content: center;
     display: flex;
-    color: #439AEB;
+    color: #2689E6;
     align-items: center;
     font-size: 28px;
+    margin-left: 10px;
 }
 
 .spots-list {
   flex: 1;
   overflow-y: auto;
+  max-height: 300px;
+  padding-left:40px;
+  padding-right: 40px;
 }
 
 .spot-btn {
@@ -335,6 +419,8 @@ const selectSpot = (id) => selectedSpot.value = id
 .spot-btn.active {
   border: 2px solid blue;
 }
+
+
 
 /* ADAPT HEIGHT */
 @media (max-height: 700px) {
