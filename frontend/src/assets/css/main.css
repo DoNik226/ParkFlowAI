@@ -1,0 +1,291 @@
+.main-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #F2EEEE;
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 25px;
+  background: #2689E6;
+  color: white;
+}
+
+
+.logo {
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.load-box {
+  background: white;
+  color: black;
+  padding: 10px 25px;
+  border-radius: 10px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  padding-right: 10px;
+  gap: 30px;
+}
+
+.logout {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+
+
+/* CONTENT */
+.content {
+  display: flex;
+  flex: 1;
+  padding: 40px;
+  gap: 20px;
+}
+
+/* MAP */
+.map-section {
+  flex: 2.65;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.map-box {
+  width: 100%;
+  height: 470px;
+  background: grey;
+  border-radius: 20px;
+  border: 3px solid #1D7DD7;
+  position: relative;
+}
+
+.zoom-controls {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.zoom-controls button {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: lightgrey;
+  color: black;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.route-btn {
+  margin-top: 15px;
+  width: 500px;
+  background: #439AEB;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+/* RIGHT PANEL */
+.control-panel {
+  flex: 0.8;
+  padding: 10px 20px 0 30px;
+}
+
+/* DROPDOWNS */
+.dropdowns {
+  display: flex;
+  position: relative;
+}
+
+.dropdown {
+  flex: 1;
+}
+
+/* HEADER */
+.dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px;
+  align-items: left;
+  cursor: pointer;
+  color: white; 
+  border: 1px solid #2689E6;
+  background: #439AEB;
+  font-size: 15px;
+}
+
+
+.arrow {
+  width: 15px;
+  height: 15px;
+  transition: transform 0.3s ease; 
+  transform-origin: center;        
+}
+
+/* поворот */
+.arrow.rotate {
+  transform: rotate(180deg);
+}
+
+/* CLOSED */
+.dropdown-header.left {
+  border-radius: 10px 0 0 10px;
+}
+
+.dropdown-header.right {
+  border-radius: 0 10px 10px 0;
+}
+
+/* OPEN */
+.dropdown-header.left.open {
+  border-radius: 10px 0 0 0;
+}
+
+.dropdown-header.right.open {
+  border-radius: 0 10px 0 0;
+}
+
+/* BODY */
+.dropdown-body {
+  position: absolute;
+  border: 1px solid #2689E6;
+  border-top: none;
+  background: white;
+  width: 49.8%;
+
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.right-body {
+  left: auto;
+  right: 0;
+}
+
+/* когда открыт только один (стандарт) */
+.left-body,
+.right-body {
+  border-radius: 0 0 10px 10px;
+}
+
+/* когда открыты оба */
+
+/* левый список */
+.both-open-left {
+  border-radius: 0 0 0 10px;
+}
+
+/* правый список */
+.both-open-right {
+  border-radius: 0 0 10px 0; 
+}
+
+/* SCROLL */
+.dropdown-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-body::-webkit-scrollbar-thumb {
+  background: #439AEB;
+  border-radius: 10px;
+}
+
+.spots-list::-webkit-scrollbar {
+  width: 10px;
+  border-radius: 10px;
+  background: white;
+  border: 2px solid #439AEB;
+}
+
+.spots-list::-webkit-scrollbar-thumb {
+  background: #439AEB;
+  border-radius: 10px;
+  border: 2px solid transparent;  
+  background-clip: content-box;
+}
+
+/* ITEMS */
+.dropdown-item {
+  display: flex;
+  border: 1px solid #2689E6;
+  justify-content: space-between;
+  padding: 5px 10px;
+}
+
+/* BUTTON */
+.refresh {
+  width: 100%;
+  border: none;
+  background: #439AEB;
+  color: white;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.logout img,
+.refresh img {
+  vertical-align: middle;
+}
+
+/* SPOTS */
+.free-spots {
+    margin-top: 120px;
+}
+
+.free-spots h3 {
+  text-align: center;             
+  font-size: 22px;  
+  padding-right: 20px;      
+  font-weight: 600;   
+  color: #439AEB;     
+}
+
+.spots-list {
+  max-height: 250px;
+  overflow-y: auto;
+  padding-left: 60px;
+  padding-right: 60px;
+}
+
+.spot-btn {
+  width: 100%;
+  margin: 0 0 20px 0;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: #439AEB;
+  cursor: pointer;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+}
+
+.spot-number {
+  font-size: 20px;     
+  font-weight: 500;     
+  margin-bottom: 5px;  
+  color: white;  
+}
+
+.spot-distance {
+  font-size: 14px;      
+  color: white;          
+}
