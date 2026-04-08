@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-
-from services.auth_service import AuthService
-from schemas.auth import LoginRequest
-
 from typing import Annotated
 
-security = HTTPBasic()
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.security import OAuth2PasswordRequestForm
+
+from back.app.api.deps import get_auth_service, get_current_active_user
+from back.app.core.exceptions import AccountLockedError, AuthenticationError
+from back.app.models.user import User
+from back.app.schemas.auth import LoginRequest, TokenResponse
+from back.app.schemas.users import AuthUser
+from back.app.services.auth_service import AuthService
 
 router = APIRouter(
     prefix="/auth",
@@ -14,12 +16,67 @@ router = APIRouter(
 )
 
 
-@router.post("/login")
-async def login(data: LoginRequest, auth_service: AuthService = Depends()):
+@router.post("/login", response_model=TokenResponse)
+async def login(
+    data: LoginRequest,
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+):
+    client_ip = request.client.host if request.client else None
     try:
-        return await auth_service.login(data.login, data.password)
-    except Exception:
+        return await auth_service.login(data.login, data.password, client_ip=client_ip)
+    except AccountLockedError as exc:
         raise HTTPException(
-            status_code=401,
-            detail="Неверный логин или пароль"
+            status_code=status.HTTP_423_LOCKED,
+            detail={
+                "message": "Аккаунт временно заблокирован",
+                "locked_until": exc.locked_until.isoformat() if exc.locked_until else None,
+            },
         )
+    except AuthenticationError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный логин или пароль",
+        )
+
+
+@router.post("/token", response_model=TokenResponse)
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+):
+    client_ip = request.client.host if request.client else None
+    try:
+        return await auth_service.login(
+            form_data.username,
+            form_data.password,
+            client_ip=client_ip,
+        )
+    except AccountLockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail={
+                "message": "Аккаунт временно заблокирован",
+                "locked_until": exc.locked_until.isoformat() if exc.locked_until else None,
+            },
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except AuthenticationError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный логин или пароль",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout() -> Response:
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me", response_model=AuthUser)
+async def me(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    return current_user

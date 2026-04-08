@@ -1,6 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    login: str
+    password: str = Field(min_length=10, max_length=64)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    role: str
+    user_id: int

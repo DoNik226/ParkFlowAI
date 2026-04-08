@@ -1,3 +1,6 @@
+import os
+
+import bcrypt
 import psycopg2
 
 
@@ -101,6 +104,21 @@ class DatabaseMigration:
             print(f"  Ошибка при проверке индекса {index_name}: {e}")
             return False
 
+    def column_exists(self, table_name: str, column_name: str) -> bool:
+        try:
+            self.cursor.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    AND table_name = %s
+                    AND column_name = %s
+                )
+            """, (table_name, column_name))
+            return self.cursor.fetchone()[0]
+        except Exception as e:
+            print(f"  Ошибка при проверке колонки {table_name}.{column_name}: {e}")
+            return False
+
     def create_enums(self):
         """Создание ENUM типов с проверкой существования"""
         enums = [
@@ -127,6 +145,7 @@ class DatabaseMigration:
 
         if self.table_exists(table_name):
             print(f"  Таблица '{table_name}' уже существует, пропускаем создание")
+            self.ensure_users_table_columns()
             return
 
         create_table_sql = """
@@ -140,6 +159,8 @@ class DatabaseMigration:
             is_active BOOLEAN DEFAULT TRUE,
             failed_attempts INTEGER DEFAULT 0,
             locked_until TIMESTAMP WITH TIME ZONE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE,
 
             CONSTRAINT username_min_length CHECK (LENGTH(username) >= 3)
         )
@@ -169,6 +190,96 @@ class DatabaseMigration:
         except Exception as e:
             print(f"✗ Ошибка создания таблицы {table_name}: {e}")
             raise
+
+    def ensure_users_table_columns(self):
+        table_name = "users"
+        alter_statements = [
+            (
+                "created_at",
+                "ALTER TABLE users ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+            ),
+            (
+                "updated_at",
+                "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE"
+            ),
+        ]
+
+        for column_name, sql in alter_statements:
+            if self.column_exists(table_name, column_name):
+                print(f"  Колонка '{table_name}.{column_name}' уже существует, пропускаем")
+                continue
+            self.cursor.execute(sql)
+            print(f"  ✓ Колонка '{table_name}.{column_name}' создана")
+
+    def create_login_attempts_table(self):
+        """Создание таблицы login_attempts для будущего rate limiting по IP."""
+        table_name = "login_attempts"
+
+        if self.table_exists(table_name):
+            print(f"  Таблица '{table_name}' уже существует, пропускаем создание")
+            return
+
+        create_table_sql = """
+        CREATE TABLE login_attempts (
+            id BIGSERIAL PRIMARY KEY,
+            ip_address VARCHAR(45) NOT NULL,
+            login VARCHAR(255) NOT NULL,
+            was_successful BOOLEAN NOT NULL DEFAULT FALSE,
+            attempted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        )
+        """
+
+        indexes = [
+            ("idx_login_attempts_ip_address", "CREATE INDEX idx_login_attempts_ip_address ON login_attempts(ip_address)"),
+            ("idx_login_attempts_login", "CREATE INDEX idx_login_attempts_login ON login_attempts(login)"),
+            ("idx_login_attempts_attempted_at", "CREATE INDEX idx_login_attempts_attempted_at ON login_attempts(attempted_at)")
+        ]
+
+        try:
+            self.cursor.execute(create_table_sql)
+            print(f"✓ Таблица '{table_name}' создана")
+            self.migration_history.append(f"created_table_{table_name}")
+
+            for index_name, index_sql in indexes:
+                if not self.index_exists(index_name):
+                    self.cursor.execute(index_sql)
+                    print(f"  ✓ Индекс '{index_name}' создан")
+                else:
+                    print(f"  Индекс '{index_name}' уже существует, пропускаем")
+        except Exception as e:
+            print(f"✗ Ошибка создания таблицы {table_name}: {e}")
+            raise
+
+    def create_default_admin(self):
+        username = os.getenv("INITIAL_ADMIN_USERNAME")
+        email = os.getenv("INITIAL_ADMIN_EMAIL")
+        password = os.getenv("INITIAL_ADMIN_PASSWORD")
+        full_name = os.getenv("INITIAL_ADMIN_FULL_NAME")
+
+        if not username or not email or not password:
+            print("  Начальный администратор не настроен через env, пропускаем создание")
+            return
+
+        self.cursor.execute(
+            "SELECT id FROM users WHERE role = 'admin' OR username = %s OR email = %s LIMIT 1",
+            (username, email),
+        )
+        if self.cursor.fetchone():
+            print("  Начальный администратор уже существует, пропускаем создание")
+            return
+
+        password_hash = bcrypt.hashpw(
+            password.encode("utf-8"),
+            bcrypt.gensalt(),
+        ).decode("utf-8")
+        self.cursor.execute(
+            """
+            INSERT INTO users (username, email, password_hash, role, full_name, is_active, failed_attempts, locked_until)
+            VALUES (%s, %s, %s, 'admin', %s, TRUE, 0, NULL)
+            """,
+            (username, email, password_hash, full_name),
+        )
+        print("✓ Начальный администратор создан")
 
     def create_parkings_table(self):
         """Создание таблицы parkings с проверкой существования"""
@@ -498,7 +609,7 @@ class DatabaseMigration:
             Словарь со статусом каждой таблицы
         """
         tables = [
-            'users', 'parkings', 'road_vertices', 'road_edges',
+            'users', 'login_attempts', 'parkings', 'road_vertices', 'road_edges',
             'cameras', 'parking_spots', 'entrances', 'parking_occupancy_cache'
         ]
 
@@ -534,6 +645,7 @@ class DatabaseMigration:
 
             # Создаем таблицы в правильном порядке (с учетом зависимостей)
             self.create_users_table()
+            self.create_login_attempts_table()
             self.create_parkings_table()
             self.create_road_vertices_table()
             self.create_road_edges_table()
@@ -542,6 +654,10 @@ class DatabaseMigration:
             self.create_entrances_table()
             self.create_parking_occupancy_cache_table()
 
+            if create_admin:
+                self.create_default_admin()
+
+            self.conn.commit()
 
             print("\n=== Миграция успешно завершена ===\n")
 
