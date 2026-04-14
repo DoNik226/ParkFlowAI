@@ -43,6 +43,10 @@ const routes = [
         path: 'parkings',
         component: () => import('../views/ParkingView.vue')
       }, 
+      {
+        path: 'events',
+        component: () => import('../components/admin/EventLogViewer.vue')
+      },
     ]
   }, 
 
@@ -70,17 +74,17 @@ router.beforeEach((to, from, next) => {
 
   const mobile = isMobile()
 
-  // 📱 всегда уводим на мобильную
+  // всегда уводим на мобильную
   if (mobile && to.path !== '/m') {
     return next('/m')
   }
 
-  // 💻 запрещаем мобильную страницу на десктопе
+  // запрещаем мобильную страницу на десктопе
   if (!mobile && to.path === '/m') {
     return next('/main')
   }
 
-  // 📱 мобильная версия без авторизации
+  // мобильная версия без авторизации
   if (mobile) {
     return next()
   }

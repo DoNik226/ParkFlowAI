@@ -45,6 +45,13 @@
             <span class="admin-label">Приложение</span>
         </div>
 
+        <div class="admin-item" @click="goEvents">
+            <div class="admin-card">
+              <img src="../assets/img/mobile-app.png" alt="app">
+            </div>
+            <span class="admin-label">Журнал событий</span>
+        </div>
+
         </div>
 
       <!-- ВЛОЖЕННЫЕ СТРАНИЦЫ -->
@@ -62,4 +69,5 @@ const router = useRouter()
 const goUsers = () => router.push('/admin/users')
 const goParkings = () => router.push('/admin/parkings')
 const goApp = () => router.push('/main')
+const goEvents = () => router.push('/admin/events')
 </script>
