@@ -26,14 +26,14 @@
 
         <div class="admin-item" @click="goUsers">
             <div class="admin-card">
-            <img src="../assets/img/user.png" alt="app">
+            <img src="../assets/img/user.png" alt="users">
             </div>
             <span class="admin-label">Пользователи</span>
         </div>
 
         <div class="admin-item" @click="goParkings">
             <div class="admin-card">
-            <img src="../assets/img/parking.png" alt="app">
+            <img src="../assets/img/parking.png" alt="parkings">
             </div>
             <span class="admin-label">Парковки</span>
         </div>
@@ -47,7 +47,7 @@
 
         <div class="admin-item" @click="goEvents">
             <div class="admin-card">
-              <img src="../assets/img/mobile-app.png" alt="app">
+              <img src="../assets/img/file.png" alt="event">
             </div>
             <span class="admin-label">Журнал событий</span>
         </div>
