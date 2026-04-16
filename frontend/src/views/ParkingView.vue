@@ -232,8 +232,8 @@
 const USE_MOCK_DATA = true
 
 // Импорты сервисов 
-// import { parkingService } from '@/services/parking'
-// import { cameraService } from '@/services/camera'
+import { parkingService } from '@/services/parking'
+import { cameraService } from '@/services/camera'
 
 export default {
   name: 'ParkingListView',
