@@ -12,11 +12,5 @@ class RoadVertex(Base):
     is_entrance = Column(Boolean, nullable=False, default=False)
     parking_id = Column(BigInteger, ForeignKey("parkings.id", ondelete="CASCADE"))
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    # Relationships
-    parking = relationship("Parking", backref="vertices")
-
     def __repr__(self):
         return f"<RoadVertex(id={self.id}, is_spot={self.is_spot}, is_entrance={self.is_entrance})>"

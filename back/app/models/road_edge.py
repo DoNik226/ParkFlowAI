@@ -14,9 +14,6 @@ class RoadEdge(Base):
     one_way = Column(Boolean, nullable=False, default=False)
     is_bidirectional = Column(Boolean, nullable=False, default=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
     # Relationships
     source_vertex = relationship("RoadVertex", foreign_keys=[source], backref="outgoing_edges")
     destination_vertex = relationship("RoadVertex", foreign_keys=[destination], backref="incoming_edges")
