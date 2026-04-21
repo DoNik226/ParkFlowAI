@@ -1,415 +1,424 @@
 <template>
-  <div class="log-page">
+  <div class="log-page" ref="rootRef">
 
-    <!-- TOP BAR -->
-    <div class="top-bar">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        class="tab-btn"
-        :class="{ active: activeTab === tab.key }"
-        @click="activeTab = tab.key"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
-
-    <!-- TABLE -->
     <div class="table-container">
+      <table class="log-table">
+        <thead>
+          <tr>
 
-      <div class="table-with-button">
+            <!-- ОБЪЕКТ -->
+            <th>
+              Объект
 
-        <table class="log-table">
-          <thead>
-            <!-- HEADER -->
-            <tr>
-              <th v-for="col in activeTable.columns" :key="col.key" :style="{ width: col.width }">
-                {{ col.label }}
-              </th>
-            </tr>
+              <button
+                class="icon"
+                :class="{ active: showObjectDropdown }"
+                @click.stop="toggle('object')"
+              >
+                ▼
+              </button>
 
-            <!-- FILTER ROW -->
-            <tr class="filter-row">
+              <div v-if="showObjectDropdown" class="dropdown">
+                <div
+                  v-for="item in objectOptions"
+                  :key="item.value"
+                  :class="{ active: selectedObject === item.value }"
+                  @click="setObjectFilter(item.value)"
+                >
+                  {{ item.label }}
+                </div>
+              </div>
+            </th>
 
-              <!-- USER FILTERS -->
-              <template v-if="activeTab === 'user'">
-                <th>
-                  <input v-model="filters.user.user" class="input" placeholder="Пользователь" />
-                </th>
+            <!-- ПАРКОВКА -->
+            <th v-if="selectedObject === 'camera'">
+              Парковка
 
-                <th>
-                  <div class="date-filter"> 
-                    <div class="date-group"> 
-                      <span>От</span> 
-                      <input type="datetime-local" v-model="filters.dateFrom" /> 
-                    </div> <div class="date-group"> 
-                      <span>До</span> 
-                      <input type="datetime-local" v-model="filters.dateTo" /> 
-                    </div>
-                  </div>
-                </th>
+              <button
+                class="icon"
+                :class="{ active: showParkingDropdown }"
+                @click.stop="toggle('parking')"
+              >
+                ▼
+              </button>
 
-                <th>
-                  <input v-model="filters.user.description" class="input" placeholder="Описание" />
-                </th>
-              </template>
+              <div v-if="showParkingDropdown" class="dropdown">
+                <div
+                  @click="setParkingFilter('')"
+                  :class="{ active: !selectedParking }"
+                >
+                  Все
+                </div>
 
-              <!-- ADMIN FILTERS -->
-              <template v-if="activeTab === 'admin'">
-                <th>
-                  <input v-model="filters.admin.admin" class="input" placeholder="Администратор" />
-                </th>
+                <div
+                  v-for="p in uniqueParkings"
+                  :key="p"
+                  :class="{ active: selectedParking === p }"
+                  @click="setParkingFilter(p)"
+                >
+                  {{ p }}
+                </div>
+              </div>
+            </th>
 
-                <th>
-                  <div class="date-filter"> 
-                    <div class="date-group"> 
-                      <span>От</span> 
-                      <input type="datetime-local" v-model="filters.dateFrom" /> 
-                    </div> <div class="date-group"> 
-                      <span>До</span> 
-                      <input type="datetime-local" v-model="filters.dateTo" /> 
-                    </div>
-                  </div>
-                </th>
+            <!-- ДАТА -->
+            <th>
+              Дата и время
 
-                <th>
-                  <input v-model="filters.admin.description" class="input" placeholder="Описание" />
-                </th>
-              </template>
+              <button class="icon" @click.stop="toggle('date')">
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="currentColor"
+                    d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm13 8H4v10h16V10z"/>
+                </svg>
+              </button>
 
-              <!-- CAMERA FILTERS -->
-              <template v-if="activeTab === 'camera'">
+              <div v-if="showDateFilter" class="dropdown date-popup">
+                <div class="field">
+                  <label>От</label>
+                  <input type="datetime-local" v-model="dateFrom" />
+                </div>
 
-                <th>
-                  <input v-model="filters.camera.cameraName" class="input" placeholder="Камера" />
-                </th>
+                <div class="field">
+                  <label>До</label>
+                  <input type="datetime-local" v-model="dateTo" />
+                </div>
 
-                <th>
-                  <input v-model="filters.camera.parkingName" class="input" placeholder="Парковка" />
-                </th>
+                <div class="actions">
+                  <button @click="dateFrom = ''; dateTo = ''">Сбросить</button>
+                </div>
+              </div>
+            </th>
 
-                <th>
-                  <div class="date-filter"> 
-                    <div class="date-group"> 
-                      <span>От</span> 
-                      <input type="datetime-local" v-model="filters.dateFrom" /> 
-                    </div> <div class="date-group"> 
-                      <span>До</span> 
-                      <input type="datetime-local" v-model="filters.dateTo" /> 
-                    </div>
-                  </div>
-                </th>
+            <!-- ОПИСАНИЕ -->
+            <th>
+              Описание
 
-                <th>
-                  <input v-model="filters.camera.description" class="input" placeholder="Описание" />
-                </th>
+              <button class="icon" @click.stop="toggle('search')">
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="currentColor"
+                    d="M10 2a8 8 0 105.29 14.29l4.7 4.7l1.41-1.41l-4.7-4.7A8 8 0 0010 2z"/>
+                </svg>
+              </button>
 
-              </template>
+              <div v-if="showSearch" class="dropdown">
+                <div class="search-box">
+                  <svg width="16" height="16" viewBox="0 0 24 24">
+                    <path fill="currentColor"
+                      d="M10 2a8 8 0 105.29 14.29l4.7 4.7l1.41-1.41l-4.7-4.7A8 8 0 0010 2z"/>
+                  </svg>
 
-            </tr>
-          </thead>
+                  <input v-model="searchText" placeholder="Поиск события..." />
+                </div>
+              </div>
+            </th>
 
-          <tbody>
-            <tr v-for="(item, index) in filteredData" :key="index">
-              <td v-for="col in activeTable.columns" :key="col.key" :style="{ width: col.width }">
-                {{ item[col.key] }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+          </tr>
+        </thead>
 
-        <button class="search-btn" @click="applyFilter">
-          <img src="../../assets/img/loupe.png" width="23px">
-        </button>
+        <tbody>
+          <tr v-for="(item, i) in filteredData" :key="i">
+            <td>{{ item.objectName }}</td>
 
-      </div>
+            <td v-if="selectedObject === 'camera'">
+              {{ item.parkingName || '-' }}
+            </td>
 
+            <td>{{ item.date }}</td>
+            <td>{{ item.description }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-
-const tabs = [
-  { key: 'user', label: 'Действия пользователя' },
-  { key: 'admin', label: 'Действия администратора' },
-  { key: 'camera', label: 'События с камер' }
-]
-
-const tableConfig = {
-  user: {
-    columns: [
-      { key: 'user', label: 'Пользователь', width: '25%' },
-      { key: 'date', label: 'Дата и время', width: '35%' },
-      { key: 'description', label: 'Описание', width: '40%' }
-    ],
-    dataKey: 'userLogs'
-  },
-
-  admin: {
-    columns: [
-      { key: 'admin', label: 'Администратор', width: '25%' },
-      { key: 'date', label: 'Дата и время', width: '35%' },
-      { key: 'description', label: 'Описание', width: '40%' }
-    ],
-    dataKey: 'adminLogs'
-  },
-
-  camera: {
-    columns: [
-      { key: 'cameraName', label: 'Камера', width: '15%' },
-      { key: 'parkingName', label: 'Парковка', width: '15%' },
-      { key: 'date', label: 'Дата и время', width: '36%' },
-      { key: 'description', label: 'Описание', width: '34%' }
-    ],
-    dataKey: 'cameraLogs'
-  }
-}
-
-const activeTab = ref('user')
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 const logs = ref([
-  { user: 'ivanivanovich', date: '2026-04-14 10:15', description: 'Вход в систему' },
-  { user: 'petrpetrovich', date: '2026-04-14 11:20', description: 'Обновление въезда' },
-  { user: 'sidorsidorovich', date: '2026-04-13 09:05', description: 'Выход из системы' }
-])
-
-const adminLogs = ref([
-  { admin: 'admin1', date: '2026-04-14 12:00', description: 'Удаление пользователя' }
-])
-
-const cameraLogs = ref([
+  { type: 'user', objectName: 'ivan', date: '2026-04-14 10:00', description: 'Вход' },
+  { type: 'admin', objectName: 'admin1', date: '2026-04-14 11:00', description: 'Удаление' },
   {
-    cameraName: 'CAM-01',
+    type: 'camera',
+    objectName: 'CAM-01',
     parkingName: 'P1',
-    date: '2026-04-14 09:00',
-    description: 'Обнаружен автомобиль'
+    date: '2026-04-14 12:00',
+    description: 'Обнаружен авто'
   }
 ])
 
-const activeTable = computed(() => tableConfig[activeTab.value])
+const rootRef = ref(null)
 
-const currentData = computed(() => {
-  if (activeTab.value === 'user') return logs.value
-  if (activeTab.value === 'admin') return adminLogs.value
-  if (activeTab.value === 'camera') return cameraLogs.value
-})
 
-const filters = ref({
-  user: {
-    user: '',
-    dateFrom: '',
-    dateTo: '',
-    description: ''
-  },
+/* OPTIONS */
+const objectOptions = [
+  { value: 'all', label: 'Все' },
+  { value: 'user', label: 'Пользователь' },
+  { value: 'admin', label: 'Администратор' },
+  { value: 'camera', label: 'Камера' }
+]
 
-  admin: {
-    admin: '',
-    dateFrom: '',
-    dateTo: '',
-    description: ''
-  },
+/* STATE */
+const selectedObject = ref('all')
+const selectedParking = ref('')
+const dateFrom = ref('')
+const dateTo = ref('')
+const searchText = ref('')
 
-  camera: {
-    cameraName: '',
-    parkingName: '',
-    dateFrom: '',
-    dateTo: '',
-    description: ''
+/* DROPDOWNS */
+const showObjectDropdown = ref(false)
+const showParkingDropdown = ref(false)
+const showDateFilter = ref(false)
+const showSearch = ref(false)
+
+/* TOGGLE */
+const toggle = (type) => {
+
+  const map = {
+    object: showObjectDropdown,
+    parking: showParkingDropdown,
+    date: showDateFilter,
+    search: showSearch
   }
-})
 
-const appliedFilters = ref({ ...filters.value })
+  const target = map[type]
 
-const applyFilter = () => {
-  appliedFilters.value = { ...filters.value }
+  const isOpen = target.value
+
+  closeAll()
+
+  // если было закрыто — открыть
+  target.value = !isOpen
 }
 
+const closeAll = () => {
+  showObjectDropdown.value = false
+  showParkingDropdown.value = false
+  showDateFilter.value = false
+  showSearch.value = false
+}
+
+
+const handleClickOutside = (e) => {
+  const el = rootRef.value
+  if (!el) return
+
+  if (!el.contains(e.target)) {
+    closeAll()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+/* SETTERS */
+const setObjectFilter = (val) => {
+  selectedObject.value = val
+  closeAll()
+}
+
+const setParkingFilter = (val) => {
+  selectedParking.value = val
+  closeAll()
+}
+
+/* DATA */
+const uniqueParkings = computed(() => {
+  return [...new Set(
+    logs.value
+      .filter(l => l.type === 'camera')
+      .map(l => l.parkingName)
+  )]
+})
+
+/* FILTER */
 const filteredData = computed(() => {
-  const data = currentData.value
-  const f = filters.value[activeTab.value]
+  return logs.value.filter(item => {
 
-  return data.filter(item => {
+    if (selectedObject.value !== 'all' && item.type !== selectedObject.value)
+      return false
 
-    const matchText = Object.keys(item).every(key => {
-      if (key === 'date') return true
+    if (selectedObject.value === 'camera' && selectedParking.value) {
+      if (item.parkingName !== selectedParking.value) return false
+    }
 
-      if (!f[key]) return true
+    if (searchText.value &&
+      !item.description.toLowerCase().includes(searchText.value.toLowerCase()))
+      return false
 
-      return String(item[key])
-        .toLowerCase()
-        .includes(f[key].toLowerCase())
-    })
+    const d = new Date(item.date)
 
-    const date = new Date(item.date)
+    if (dateFrom.value && d < new Date(dateFrom.value)) return false
+    if (dateTo.value && d > new Date(dateTo.value)) return false
 
-    const matchFrom = f.dateFrom
-      ? date >= new Date(f.dateFrom)
-      : true
-
-    const matchTo = f.dateTo
-      ? date <= new Date(f.dateTo)
-      : true
-
-    return matchText && matchFrom && matchTo
+    return true
   })
 })
 </script>
 
 <style scoped>
-
-.log-page {
-  padding: 20px;
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-/* TOP BAR */
-.top-bar {
-  margin: -20px -20px 0 -20px;
-  width: calc(100% + 40px);
-  background: #e5e5e5;
-  display: flex;
-  gap: 0;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+th, td {
+  border: 1px solid #e0e0e0;
+  padding: 12px;
+  text-align: center;
+  position: relative;
 }
 
-.tab-btn {
-  padding: 10px 20px;
-  display: flex;
-  height: 40px;
-  border: none;
-  background: #cfcfcf;
+th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+/* ICON */
+.icon {
+  margin-left: 6px;
   cursor: pointer;
-  border-right: 1px solid #6C6A6A;
-}
-
-.tab-btn.active {
-  background: white;
-  font-weight: bold;
-}
-
-/* TABLE + BUTTON */
-.table-with-button {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.log-table {
-  table-layout: fixed;
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid #6C6A6A;      
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-/* BODY */
-.log-table td {
-  padding: 10px;
-  text-align: center;  
-  border-right: 1px solid #6C6A6A; 
-  border-top: 1px solid #6C6A6A;
-}
-
-.log-table th {
-  padding: 10px;
-  text-align: center;
-  border-right: 1px solid #6C6A6A;
-}
-
-.log-table thead tr + tr th {
-  border-top: 1px solid #6C6A6A;
-}
-
-/* Убираем правую границу у последнего столбца */
-.log-table td:last-child {
-  border-right: none;
-}
-
-.log-table th:last-child {
-  border-right: none;
-}
-
-/* Чередование строк */
-.log-table tbody tr:nth-child(even) {
-  background: #FFFFFF;
-}
-
-.log-table tbody tr:nth-child(odd) {
-  background: #F5F2F2;
-}
-
-.log-table thead tr:first-child th {
-  background: #F5F2F2;
-}
-
-.log-table {
-  table-layout: fixed;
-}
-
-.filter-row {
-  background: #FFFFFF;
-  border-bottom: 1px solid #6C6A6A;
-}
-
-
-.filter-row input {
-  width: 100%;
-  padding: 4px;
-  box-sizing: border-box;
-}
-
-
-.date-filter {
-  display: flex;
-  gap: 10px;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.date-group {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-}
-
-.date-group input {
-  width: 160px;
-  flex: 0 0 160px;
-  box-sizing: border-box;
-  padding: 6px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  text-align: center;
-  color: #6C6A6A;
-}
-
-.date-group span {
-  min-width: 20px;
-  flex-shrink: 0;
-}
-
-.input {
-  padding: 4px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.search-btn {
-  height: 40px;
-  width: 40px;
-  margin-top: 50px;
   border: none;
+  background: none;
+  transition: 0.2s;
+}
+
+.icon.active {
+  transform: rotate(180deg);
+}
+
+/* КНОПКИ ФИЛЬТРОВ */
+.filter-btn {
+  margin-left: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+
+.filter-btn:hover {
+  background: #eef2ff;
+}
+
+/* DROPDOWN */
+.dropdown {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  min-width: 240px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+
+  padding: 12px;
+  z-index: 100;
+
+  animation: fade 0.15s ease;
+}
+
+/* ПУНКТЫ */
+.dropdown div {
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dropdown div:hover {
+  background: #f4f7ff;
+}
+
+.dropdown .active {
   background: #3B66F4;
   color: white;
-  border-radius: 10px;
+}
+
+/* ПОЛЯ */
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.field label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.field input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #dcdcdc;
+  transition: 0.2s;
+}
+
+.field input:focus {
+  border-color: #3B66F4;
+  box-shadow: 0 0 0 2px rgba(59,102,244,0.15);
+  outline: none;
+}
+
+/* ПОИСК */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  width: 100%;
+}
+
+/* ACTIONS */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.actions button {
+  border: none;
+  background: #f3f4f6;
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
+}
+
+.actions button:hover {
+  background: #e5e7eb;
+}
+
+/* ROWS */
+tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+/* ANIMATION */
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -5px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 </style>
