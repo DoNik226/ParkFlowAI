@@ -2,132 +2,190 @@
   <div class="log-page" ref="rootRef">
 
     <div class="table-container">
-      <table class="log-table">
-        <thead>
-          <tr>
+      <div class="table-wrapper">
+        <table class="log-table">
+          <thead>
+            <tr>
 
-            <!-- ОБЪЕКТ -->
-            <th>
-              Объект
+              <!-- ОБЪЕКТ -->
+              <th>
+                Объект
 
-              <button
-                class="icon"
-                :class="{ active: showObjectDropdown }"
-                @click.stop="toggle('object')"
-              >
-                ▼
-              </button>
-
-              <div v-if="showObjectDropdown" class="dropdown">
-                <div
-                  v-for="item in objectOptions"
-                  :key="item.value"
-                  :class="{ active: selectedObject === item.value }"
-                  @click="setObjectFilter(item.value)"
+                <button
+                  class="icon"
+                  :class="{ active: showObjectDropdown }"
+                  @click.stop="toggle('object')"
                 >
-                  {{ item.label }}
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path
+                      d="M8 10l4 4 4-4"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+
+                <div v-if="showObjectDropdown" class="dropdown">
+                  <div
+                    v-for="item in objectOptions"
+                    :key="item.value"
+                    :class="{ active: selectedObject === item.value }"
+                    @click="setObjectFilter(item.value)"
+                  >
+                    {{ item.label }}
+                  </div>
                 </div>
-              </div>
-            </th>
+              </th>
 
-            <!-- ПАРКОВКА -->
-            <th v-if="selectedObject === 'camera'">
-              Парковка
+              <!-- ПАРКОВКА -->
+              <th v-if="selectedObject === 'camera'">
+                Парковка
 
-              <button
-                class="icon"
-                :class="{ active: showParkingDropdown }"
-                @click.stop="toggle('parking')"
-              >
-                ▼
-              </button>
-
-              <div v-if="showParkingDropdown" class="dropdown">
-                <div
-                  @click="setParkingFilter('')"
-                  :class="{ active: !selectedParking }"
+                <button
+                  class="icon"
+                  :class="{ active: showParkingDropdown }"
+                  @click.stop="toggle('parking')"
                 >
-                  Все
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path
+                      d="M8 10l4 4 4-4"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+
+                <div v-if="showParkingDropdown" class="dropdown">
+                  <div
+                    @click="setParkingFilter('')"
+                    :class="{ active: !selectedParking }"
+                  >
+                    Все
+                  </div>
+
+                  <div
+                    v-for="p in uniqueParkings"
+                    :key="p"
+                    :class="{ active: selectedParking === p }"
+                    @click="setParkingFilter(p)"
+                  >
+                    {{ p }}
+                  </div>
                 </div>
+              </th>
 
-                <div
-                  v-for="p in uniqueParkings"
-                  :key="p"
-                  :class="{ active: selectedParking === p }"
-                  @click="setParkingFilter(p)"
-                >
-                  {{ p }}
-                </div>
-              </div>
-            </th>
+              <!-- ДАТА -->
+              <th>
+                Дата и время
 
-            <!-- ДАТА -->
-            <th>
-              Дата и время
-
-              <button class="icon" @click.stop="toggle('date')">
-                <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path fill="currentColor"
-                    d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm13 8H4v10h16V10z"/>
-                </svg>
-              </button>
-
-              <div v-if="showDateFilter" class="dropdown date-popup">
-                <div class="field">
-                  <label>От</label>
-                  <input type="datetime-local" v-model="dateFrom" />
-                </div>
-
-                <div class="field">
-                  <label>До</label>
-                  <input type="datetime-local" v-model="dateTo" />
-                </div>
-
-                <div class="actions">
-                  <button @click="dateFrom = ''; dateTo = ''">Сбросить</button>
-                </div>
-              </div>
-            </th>
-
-            <!-- ОПИСАНИЕ -->
-            <th>
-              Описание
-
-              <button class="icon" @click.stop="toggle('search')">
-                <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path fill="currentColor"
-                    d="M10 2a8 8 0 105.29 14.29l4.7 4.7l1.41-1.41l-4.7-4.7A8 8 0 0010 2z"/>
-                </svg>
-              </button>
-
-              <div v-if="showSearch" class="dropdown">
-                <div class="search-box">
+                <button class="icon" @click.stop="toggle('date')">
                   <svg width="16" height="16" viewBox="0 0 24 24">
                     <path fill="currentColor"
-                      d="M10 2a8 8 0 105.29 14.29l4.7 4.7l1.41-1.41l-4.7-4.7A8 8 0 0010 2z"/>
+                      d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm13 8H4v10h16V10z"/>
                   </svg>
+                </button>
 
-                  <input v-model="searchText" placeholder="Поиск события..." />
+                <div v-if="showDateFilter" class="dropdown date-popup">
+                  <div class="field">
+                    <label>От</label>
+                    <input
+                      type="text"
+                      v-model="dateFrom"
+                      placeholder="2026-04-22 14:30"
+                      @input="formatDateInput($event, 'from')"
+                    />
+                  </div>
+
+                  <div class="field">
+                    <label>До</label>
+                    <input
+                      type="text"
+                      v-model="dateTo"
+                      placeholder="2026-04-22 14:30"
+                      @input="formatDateInput($event, 'to')"
+                    />
+                  </div>
+
+                  <div class="actions">
+                    <button @click="dateFrom = ''; dateTo = ''">Сбросить</button>
+                  </div>
                 </div>
-              </div>
-            </th>
+              </th>
 
-          </tr>
-        </thead>
+              <!-- ОПИСАНИЕ -->
+              <th>
+                Описание
 
-        <tbody>
-          <tr v-for="(item, i) in filteredData" :key="i">
-            <td>{{ item.objectName }}</td>
+                <button class="icon search" @click.stop="toggle('search')">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle
+                      cx="11"
+                      cy="11"
+                      r="7"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <line
+                      x1="16.65"
+                      y1="16.65"
+                      x2="21"
+                      y2="21"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
 
-            <td v-if="selectedObject === 'camera'">
-              {{ item.parkingName || '-' }}
-            </td>
+                <div v-if="showSearch" class="dropdown">
+                  <div class="search-box">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle
+                        cx="11"
+                        cy="11"
+                        r="7"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <line
+                        x1="16.65"
+                        y1="16.65"
+                        x2="21"
+                        y2="21"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                    </svg>
 
-            <td>{{ item.date }}</td>
-            <td>{{ item.description }}</td>
-          </tr>
-        </tbody>
-      </table>
+                    <input v-model="searchText" placeholder="Поиск события..." />
+                  </div>
+                </div>
+              </th>
+
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr v-for="(item, i) in filteredData" :key="i">
+              <td>{{ item.objectName }}</td>
+
+              <td v-if="selectedObject === 'camera'">
+                {{ item.parkingName || '-' }}
+              </td>
+
+              <td>{{ item.date }}</td>
+              <td>{{ item.description }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -237,8 +295,75 @@ const uniqueParkings = computed(() => {
   )]
 })
 
+const formatDateInput = (e, type) => {
+  const input = e.target
+
+  const refVal = type === 'from' ? dateFrom : dateTo
+
+  const cursorPos = input.selectionStart
+
+  let digits = refVal.value.replace(/[^\d]/g, '')
+
+  digits = digits.slice(0, 12)
+
+  let formatted = ''
+
+  if (digits.length > 0) formatted += digits.slice(0, 4)
+  if (digits.length >= 5) formatted += '-' + digits.slice(4, 6)
+  if (digits.length >= 7) formatted += '-' + digits.slice(6, 8)
+  if (digits.length >= 9) formatted += ' ' + digits.slice(8, 10)
+  if (digits.length >= 11) formatted += ':' + digits.slice(10, 12)
+
+  refVal.value = formatted
+
+  requestAnimationFrame(() => {
+    let newPos = cursorPos
+
+    const addedSeparators =
+      (formatted.slice(0, newPos).match(/[- :]/g) || []).length
+
+    input.setSelectionRange(newPos + addedSeparators, newPos + addedSeparators)
+  })
+}
+
+const parseDate = (str) => {
+  if (!str) return null
+
+  const match = str.match(
+    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/
+  )
+
+  if (!match) return null
+
+  const [_, y, m, d, h, min] = match
+
+  const date = new Date(y, m - 1, d, h, min)
+
+  // защита от 2026-99-99
+  if (
+    date.getFullYear() != y ||
+    date.getMonth() != m - 1 ||
+    date.getDate() != d ||
+    date.getHours() != h ||
+    date.getMinutes() != min
+  ) {
+    return null
+  }
+
+  return date
+}
+
+
+const invalidDateInput = computed(() => {
+  return (
+    (dateFrom.value && !parseDate(dateFrom.value)) ||
+    (dateTo.value && !parseDate(dateTo.value))
+  )
+})
+
 /* FILTER */
 const filteredData = computed(() => {
+  if (invalidDateInput.value) return []
   return logs.value.filter(item => {
 
     if (selectedObject.value !== 'all' && item.type !== selectedObject.value)
@@ -252,10 +377,13 @@ const filteredData = computed(() => {
       !item.description.toLowerCase().includes(searchText.value.toLowerCase()))
       return false
 
-    const d = new Date(item.date)
 
-    if (dateFrom.value && d < new Date(dateFrom.value)) return false
-    if (dateTo.value && d > new Date(dateTo.value)) return false
+    const d = new Date(item.date.replace(' ', 'T'))
+    const from = parseDate(dateFrom.value)
+    const to = parseDate(dateTo.value)
+
+    if (from && d < from) return false
+    if (to && d > to) return false
 
     return true
   })
@@ -263,10 +391,81 @@ const filteredData = computed(() => {
 </script>
 
 <style scoped>
-.log-table {
-  width: 100%;
-  border-collapse: collapse;
+
+.table-wrapper {
+  border-radius: 10px;
+  border: 1px solid #6C6A6A;
+  
 }
+
+.log-table { 
+  width: 100%; 
+  border-collapse: separate; 
+  border-spacing: 0; 
+
+}
+
+.log-table td { 
+  padding: 10px; 
+  text-align: center; 
+  border-right: 1px solid #6C6A6A; 
+  border-top: 1px solid #6C6A6A; 
+}
+
+.log-table th { 
+  padding: 10px; 
+  text-align: center; 
+  border-right: 1px solid #6C6A6A; 
+} 
+
+
+.log-table thead tr + tr th { 
+  border-top: 1px solid #6C6A6A; 
+} 
+
+.log-table thead tr:first-child th:first-child {
+  border-top-left-radius: 10px;
+}
+
+.log-table thead tr:first-child th:last-child {
+  border-top-right-radius: 10px;
+}
+
+.log-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 10px;
+}
+
+.log-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 10px;
+}
+
+.log-table tbody tr:last-child td {
+  border-bottom: 1px solid #6C6A6A;
+}
+
+/* Убираем правую границу у последнего столбца */ 
+.log-table td:last-child { 
+  border-right: none; 
+} 
+
+.log-table th:last-child { 
+  border-right: none; 
+} 
+
+/* Чередование строк */ 
+.log-table tbody tr:nth-child(even) { 
+  background: #F5F2F2; 
+} 
+
+.log-table tbody tr:nth-child(odd) { 
+  background: #FFFFFF; 
+} 
+
+.log-table thead tr:first-child th { 
+  background: #F5F2F2; 
+
+} 
+
 
 th, td {
   border: 1px solid #e0e0e0;
@@ -280,6 +479,8 @@ th {
   font-weight: 600;
 }
 
+
+
 /* ICON */
 .icon {
   margin-left: 6px;
@@ -289,6 +490,11 @@ th {
   border: none;
   background: none;
   transition: 0.2s;
+  vertical-align: middle;
+}
+
+.icon.search svg {
+  transform: translateY(-1px);
 }
 
 .icon.active {
@@ -321,6 +527,7 @@ th {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  border: 1px solid lightgray;
 
   padding: 12px;
   z-index: 100;
