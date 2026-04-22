@@ -13,7 +13,7 @@
         </button>
 
         <!-- если главная -->
-        <button v-else class="logout">
+        <button v-else class="logout" @click="handleLogout">
           <img src="../assets/img/sign-out.png" width="30">
         </button>
       </div>
@@ -63,6 +63,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { authService } from '@/services/auth'
 
 const router = useRouter()
 
@@ -70,4 +71,17 @@ const goUsers = () => router.push('/admin/users')
 const goParkings = () => router.push('/admin/parkings')
 const goApp = () => router.push('/main')
 const goEvents = () => router.push('/admin/events')
+
+const handleLogout = async () => {
+  try {
+    await authService.logout()
+  } catch (error) {
+    console.error('Ошибка выхода:', error)
+  } finally {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('user_role')
+    localStorage.removeItem('user_id')
+    router.push('/')
+  }
+}
 </script>

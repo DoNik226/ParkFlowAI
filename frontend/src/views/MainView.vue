@@ -6,11 +6,11 @@
       <div class="logo">ParkFlow AI</div>
 
       <div class="load-box">
-        Загруженность: 64%
+        Загруженность: {{ occupancy }}%
       </div>
 
       <div class="user-info">
-        <span>ID пользователя: 12345</span>
+        <span>ID пользователя: {{ userId }}</span>
         <button class="logout" @click="openLogoutModal">
             <img src="../assets/img/sign-out.png" alt="Выход" width="30" height="30">
         </button>
@@ -160,11 +160,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { parkingService } from '@/services/parking'
+import { mapService } from '@/services/map'
+import { sseClient } from '@/services/sse-client'
+import { authService } from '@/services/auth'
 
 const router = useRouter()
 
+// ===== МОДАЛЬНОЕ ОКНО ВЫХОДА =====
 const showLogoutModal = ref(false)
 
 const openLogoutModal = () => {
@@ -175,32 +180,84 @@ const cancelLogout = () => {
   showLogoutModal.value = false
 }
 
-const confirmLogout = () => {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('user_role')
-
-  showLogoutModal.value = false
-
-  router.push('/login')
+const confirmLogout = async () => {
+  try {
+    await authService.logout()  // Вызов API
+  } catch (error) {
+    console.error('Ошибка выхода:', error)
+  } finally {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('user_role')
+    localStorage.removeItem('user_id')
+    showLogoutModal.value = false
+    router.push('/login')
+  }
 }
 
+// ===== ДАННЫЕ ПАРКОВОК  =====
 const showParking = ref(false)
 const showEntrance = ref(false)
 
-const parkings = ['Парковка 1', 'Парковка 2']
-const entrances = ['1', '2']
+const parkings = ref([])           
+const entrances = ref([])          
+const spots = ref([])              
+const occupancy = ref(0)          
+const userId = ref(localStorage.getItem('user_id') || 'N/A')  // ← Из localStorage
 
 const selectedParking = ref(null)
 const selectedEntrance = ref(null)
 
-const spots = ref([
-  { id: 1, entrance: 30, distance: 20 },
-  { id: 2, entrance: 18, distance: 24 },
-  { id: 3, entrance: 32, distance: 26 },
-  { id: 4, entrance: 40, distance: 35 },
-  { id: 5, entrance: 42, distance: 38 }
-])
+// ===== SSE И ЗАГРУЗКА =====
+const sseDisconnect = ref(null)
+const isLoading = ref(false)
 
+// ===== ЗАГРУЗКА ДАННЫХ ПАРКОВОК =====
+const loadParkingData = async () => {
+  isLoading.value = true
+  try {
+    const data = await parkingService.getAllParkings()
+    parkings.value = data.map(p => p.name)
+    
+    if (data.length > 0) {
+      const entrancesData = await parkingService.getEntrances(data[0].id)
+      entrances.value = entrancesData.map(e => e.name)
+      
+      const freeSpots = await parkingService.getFreeSpots(data[0].id, entrancesData[0]?.id)
+      spots.value = freeSpots
+      
+      const occupancyData = await parkingService.getParkingOccupancy(data[0].id)
+      occupancy.value = occupancyData.occupancy_percentage
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки данных:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// ===== ПОДКЛЮЧЕНИЕ SSE-ОБНОВЛЕНИЙ =====
+const connectSSE = () => {
+  sseDisconnect.value = sseClient.connect((event) => {
+    if (event.type === 'spot_status_changed') {
+      loadParkingData()  // Перезагрузить при изменении статуса места
+    }
+  })
+}
+
+// ===== ВЫЗОВ ПРИ МОНТИРОВАНИИ =====
+onMounted(() => {
+  loadParkingData()
+  connectSSE()
+})
+
+// ===== ОЧИСТКА ПРИ УХОДЕ СО СТРАНИЦЫ =====
+onBeforeUnmount(() => {
+  if (sseDisconnect.value) {
+    sseDisconnect.value()  // Отключить SSE
+  }
+})
+
+// ===== УПРАВЛЕНИЕ DROPDOWN =====
 const toggleParking = () => {
   showParking.value = !showParking.value
 }
@@ -215,8 +272,14 @@ const selectEntrance = (e) => selectedEntrance.value = e
 const applyParking = () => showParking.value = false
 const applyEntrance = () => showEntrance.value = false
 
-const buildRoute = (spot) => {
-  console.log('Маршрут до:', spot)
+// ===== ПОСТРОЕНИЕ МАРШРУТА =====
+const buildRoute = async (spot) => {
+  try {
+    const route = await mapService.buildRoute(selectedEntrance.value, spot.id)
+    console.log('Маршрут построен:', route)
+    // Здесь будет логика отображения маршрута на карте
+  } catch (error) {
+    console.error('Ошибка построения маршрута:', error)
+  }
 }
 </script>
-
