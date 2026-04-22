@@ -8,7 +8,7 @@
             <tr>
 
               <!-- ОБЪЕКТ -->
-              <th>
+              <th class="col-object">
                 Объект
 
                 <button
@@ -41,7 +41,7 @@
               </th>
 
               <!-- ПАРКОВКА -->
-              <th v-if="selectedObject === 'camera'">
+              <th v-if="selectedObject === 'camera'" class="col-parking">
                 Парковка
 
                 <button
@@ -81,7 +81,7 @@
               </th>
 
               <!-- ДАТА -->
-              <th>
+              <th class="col-date">
                 Дата и время
 
                 <button class="icon" @click.stop="toggle('date')">
@@ -119,7 +119,7 @@
               </th>
 
               <!-- ОПИСАНИЕ -->
-              <th>
+              <th class="col-search">
                 Описание
 
                 <button class="icon search" @click.stop="toggle('search')">
@@ -195,14 +195,14 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 const logs = ref([
-  { type: 'user', objectName: 'ivan', date: '2026-04-14 10:00', description: 'Вход' },
-  { type: 'admin', objectName: 'admin1', date: '2026-04-14 11:00', description: 'Удаление' },
+  { type: 'user', objectName: 'ivan', date: '2026-04-14 10:00', description: 'Вход в приложение' },
+  { type: 'admin', objectName: 'admin1', date: '2026-04-14 11:00', description: 'Удаление пользователя: petr' },
   {
     type: 'camera',
     objectName: 'CAM-01',
     parkingName: 'P1',
     date: '2026-04-14 12:00',
-    description: 'Обнаружен авто'
+    description: 'Переподключение'
   }
 ])
 
@@ -246,7 +246,6 @@ const toggle = (type) => {
 
   closeAll()
 
-  // если было закрыто — открыть
   target.value = !isOpen
 }
 
@@ -392,6 +391,10 @@ const filteredData = computed(() => {
 
 <style scoped>
 
+.table-container {
+  padding: 40px;
+}
+
 .table-wrapper {
   border-radius: 10px;
   border: 1px solid #6C6A6A;
@@ -466,20 +469,40 @@ const filteredData = computed(() => {
 
 } 
 
+.col-object {
+  width: 22%;
+}
+
+.col-date {
+  width: 25%;
+}
+
+.col-parking {
+  width: 18%;
+}
+
+.col-search {
+  width: 45%;
+}
 
 th, td {
   border: 1px solid #e0e0e0;
   padding: 12px;
   text-align: center;
   position: relative;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 th {
   background: #f9fafb;
   font-weight: 600;
+  overflow: visible;
 }
 
-
+td {
+  overflow: hidden;
+}
 
 /* ICON */
 .icon {
@@ -519,11 +542,14 @@ th {
 /* DROPDOWN */
 .dropdown {
   position: absolute;
-  top: 44px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 100%;       
+  left: 3%;         
 
-  min-width: 240px;
+  transform: none; 
+
+  margin-top: 3px; 
+
+  min-width: 180px;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 12px 30px rgba(0,0,0,0.12);
@@ -532,7 +558,6 @@ th {
   padding: 12px;
   z-index: 100;
 
-  animation: fade 0.15s ease;
 }
 
 /* ПУНКТЫ */
@@ -554,19 +579,22 @@ th {
 /* ПОЛЯ */
 .field {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   margin-bottom: 10px;
 }
 
 .field label {
-  font-size: 12px;
+  font-size: 18px;
+  width: 50px;
   color: #666;
   margin-bottom: 4px;
 }
 
 .field input {
+  flex: 1; 
   padding: 8px 10px;
   border-radius: 8px;
+  font-size: 16px;
   border: 1px solid #dcdcdc;
   transition: 0.2s;
 }
@@ -580,6 +608,7 @@ th {
 /* ПОИСК */
 .search-box {
   display: flex;
+  min-width: 300px;
   align-items: center;
   gap: 8px;
 
@@ -589,6 +618,7 @@ th {
 }
 
 .search-box input {
+  font-size: 16px;
   border: none;
   outline: none;
   width: 100%;
@@ -602,20 +632,16 @@ th {
 
 .actions button {
   border: none;
-  background: #f3f4f6;
+  background: #439AEB;
   padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
 }
 
 .actions button:hover {
-  background: #e5e7eb;
+  background: #1867b1;
 }
 
-/* ROWS */
-tbody tr:nth-child(even) {
-  background: #fafafa;
-}
 
 /* ANIMATION */
 @keyframes fade {
