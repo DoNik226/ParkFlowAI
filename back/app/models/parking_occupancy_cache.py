@@ -14,9 +14,6 @@ class ParkingOccupancyCache(Base):
     occupancy_percentage = Column(Float, nullable=False, default=0.0)
     last_calculated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
     # Relationships
     parking = relationship("Parking", backref="occupancy_cache")
 

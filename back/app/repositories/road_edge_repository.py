@@ -1,5 +1,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
+
+from back.app.models import RoadVertex
 from back.app.models.road_edge import RoadEdge
 from back.app.repositories.base_repository import BaseRepository
 
