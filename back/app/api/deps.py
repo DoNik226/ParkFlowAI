@@ -9,8 +9,13 @@ from back.app.core.security import decode_access_token
 from back.app.database import get_db
 from back.app.models.enums import UserRole
 from back.app.models.user import User
+from back.app.logger import AuditLogger, EventLogger
+from back.app.repositories.camera_repository import CameraRepository
+from back.app.repositories.event_log_repository import EventLogRepository
+from back.app.repositories.parking_repository import ParkingRepository
 from back.app.repositories.user_repository import UserRepository
 from back.app.services.auth_service import AuthService
+from back.app.services.event_service import EventService
 from back.app.services.user_service import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -26,6 +31,50 @@ def get_auth_service(
     user_repository: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> AuthService:
     return AuthService(user_repository)
+
+
+def get_parking_repository(
+    db: Annotated[Session, Depends(get_db)],
+) -> ParkingRepository:
+    return ParkingRepository(db)
+
+
+def get_camera_repository(
+    db: Annotated[Session, Depends(get_db)],
+) -> CameraRepository:
+    return CameraRepository(db)
+
+
+def get_event_log_repository(
+    db: Annotated[Session, Depends(get_db)],
+) -> EventLogRepository:
+    return EventLogRepository(db)
+
+
+def get_event_service(
+    event_log_repository: Annotated[EventLogRepository, Depends(get_event_log_repository)],
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+    camera_repository: Annotated[CameraRepository, Depends(get_camera_repository)],
+    parking_repository: Annotated[ParkingRepository, Depends(get_parking_repository)],
+) -> EventService:
+    return EventService(
+        event_log_repository=event_log_repository,
+        user_repository=user_repository,
+        camera_repository=camera_repository,
+        parking_repository=parking_repository,
+    )
+
+
+def get_event_logger(
+    event_service: Annotated[EventService, Depends(get_event_service)],
+) -> EventLogger:
+    return EventLogger(event_service)
+
+
+def get_audit_logger(
+    event_service: Annotated[EventService, Depends(get_event_service)],
+) -> AuditLogger:
+    return AuditLogger(event_service)
 
 
 def get_user_service(

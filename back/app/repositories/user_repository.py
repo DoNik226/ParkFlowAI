@@ -38,6 +38,11 @@ class UserRepository(BaseRepository[User]):
     def list_all(self) -> list[User]:
         return self.db.query(User).order_by(User.id.asc()).all()
 
+    def list_by_ids(self, user_ids: list[int]) -> list[User]:
+        if not user_ids:
+            return []
+        return self.db.query(User).filter(User.id.in_(user_ids)).all()
+
     def update_failed_attempts(self, user_id: int, attempts: int) -> Optional[User]:
         return self.update(user_id, failed_attempts=attempts)
 

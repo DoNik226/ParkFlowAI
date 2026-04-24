@@ -17,3 +17,8 @@ class CameraRepository(BaseRepository[Camera]):
 
     def update_status(self, camera_id: int, status: CameraStatus) -> Optional[Camera]:
         return self.update(camera_id, status=status.value)
+
+    def list_by_ids(self, camera_ids: list[int]) -> List[Camera]:
+        if not camera_ids:
+            return []
+        return self.db.query(Camera).filter(Camera.id.in_(camera_ids)).all()
