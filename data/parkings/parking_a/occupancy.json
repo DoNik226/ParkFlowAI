@@ -1,0 +1,702 @@
+{
+  "parking_id": "parking_a",
+  "parking_name": "Парковка A",
+  "camera_id": "cam_a",
+  "frame_index": 3680,
+  "timestamp_sec": 122.667,
+  "summary": {
+    "total": 40,
+    "occupied": 21,
+    "free": 19,
+    "unknown": 0
+  },
+  "params": {
+    "model": "models/best.pt",
+    "conf": 0.2,
+    "imgsz": 640,
+    "crop_pad": 120,
+    "spot_margin_px": 0.0,
+    "spot_margin_m": 0.35,
+    "overlap": 0.06,
+    "zone_crops": true,
+    "spot_crops": false,
+    "enhance_crops": true,
+    "interval_sec": 1.0,
+    "source_path": "data/videos/parking_test.mp4"
+  },
+  "spots": [
+    {
+      "spot_id": "parking_a_001",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.7432,
+      "row": 1,
+      "col": 1,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": {
+        "bbox": {
+          "x1": 123.79,
+          "y1": 0.42,
+          "x2": 216.21,
+          "y2": 202.23
+        },
+        "confidence": 0.7432,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_002",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.8268,
+      "row": 1,
+      "col": 2,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": {
+        "bbox": {
+          "x1": 232.22,
+          "y1": 0.55,
+          "x2": 339.8,
+          "y2": 221.51
+        },
+        "confidence": 0.8268,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_01"
+      }
+    },
+    {
+      "spot_id": "parking_a_003",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 3,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_004",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.8459,
+      "row": 1,
+      "col": 4,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": {
+        "bbox": {
+          "x1": 472.1,
+          "y1": 13.89,
+          "x2": 574.34,
+          "y2": 213.4
+        },
+        "confidence": 0.8459,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_01"
+      }
+    },
+    {
+      "spot_id": "parking_a_005",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 5,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_006",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 6,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_007",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 7,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_008",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 8,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_009",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 9,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_010",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.8878,
+      "row": 1,
+      "col": 10,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": {
+        "bbox": {
+          "x1": 1164.48,
+          "y1": 0.0,
+          "x2": 1265.18,
+          "y2": 206.09
+        },
+        "confidence": 0.8878,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_01"
+      }
+    },
+    {
+      "spot_id": "parking_a_011",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 11,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_012",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.8396,
+      "row": 1,
+      "col": 12,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": {
+        "bbox": {
+          "x1": 1400.21,
+          "y1": 58.99,
+          "x2": 1490.99,
+          "y2": 246.06
+        },
+        "confidence": 0.8396,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_013",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.6833,
+      "row": 1,
+      "col": 13,
+      "zone": 1,
+      "zone_id": "parking_a_zone_01",
+      "vehicle": {
+        "bbox": {
+          "x1": 1514.37,
+          "y1": 5.71,
+          "x2": 1624.58,
+          "y2": 260.76
+        },
+        "confidence": 0.6833,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_014",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.7484,
+      "row": 1,
+      "col": 1,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 4.28,
+          "y1": 596.77,
+          "x2": 107.39,
+          "y2": 798.61
+        },
+        "confidence": 0.7484,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_015",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.754,
+      "row": 1,
+      "col": 2,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 133.7,
+          "y1": 598.33,
+          "x2": 232.6,
+          "y2": 801.07
+        },
+        "confidence": 0.754,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_016",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 3,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_017",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.7967,
+      "row": 1,
+      "col": 4,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 363.14,
+          "y1": 594.35,
+          "x2": 459.85,
+          "y2": 809.3
+        },
+        "confidence": 0.7967,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_018",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 5,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_019",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 6,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_020",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 7,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_021",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 8,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_022",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 9,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_023",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.7318,
+      "row": 1,
+      "col": 10,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 1093.43,
+          "y1": 568.21,
+          "x2": 1189.44,
+          "y2": 782.08
+        },
+        "confidence": 0.7318,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_024",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.828,
+      "row": 2,
+      "col": 1,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 0.0,
+          "y1": 844.57,
+          "x2": 104.13,
+          "y2": 1075.46
+        },
+        "confidence": 0.828,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_025",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.8016,
+      "row": 2,
+      "col": 2,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 124.23,
+          "y1": 837.24,
+          "x2": 223.31,
+          "y2": 1055.11
+        },
+        "confidence": 0.8016,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_026",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.7725,
+      "row": 2,
+      "col": 3,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 241.7,
+          "y1": 831.47,
+          "x2": 352.19,
+          "y2": 1069.87
+        },
+        "confidence": 0.7725,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_02"
+      }
+    },
+    {
+      "spot_id": "parking_a_027",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 2,
+      "col": 4,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_028",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 2,
+      "col": 5,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_029",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 2,
+      "col": 6,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_030",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 2,
+      "col": 7,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_031",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 2,
+      "col": 8,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_032",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.7629,
+      "row": 2,
+      "col": 9,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 959.7,
+          "y1": 868.7,
+          "x2": 1064.05,
+          "y2": 1080.0
+        },
+        "confidence": 0.7629,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_033",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.8104,
+      "row": 2,
+      "col": 10,
+      "zone": 2,
+      "zone_id": "parking_a_zone_02",
+      "vehicle": {
+        "bbox": {
+          "x1": 1094.67,
+          "y1": 861.68,
+          "x2": 1188.2,
+          "y2": 1061.21
+        },
+        "confidence": 0.8104,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_034",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.7888,
+      "row": 1,
+      "col": 1,
+      "zone": 3,
+      "zone_id": "parking_a_zone_03",
+      "vehicle": {
+        "bbox": {
+          "x1": 1675.06,
+          "y1": 928.02,
+          "x2": 1901.02,
+          "y2": 1025.56
+        },
+        "confidence": 0.7888,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_03"
+      }
+    },
+    {
+      "spot_id": "parking_a_035",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.7087,
+      "row": 1,
+      "col": 2,
+      "zone": 3,
+      "zone_id": "parking_a_zone_03",
+      "vehicle": {
+        "bbox": {
+          "x1": 1695.52,
+          "y1": 807.63,
+          "x2": 1920.0,
+          "y2": 911.51
+        },
+        "confidence": 0.7087,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_03"
+      }
+    },
+    {
+      "spot_id": "parking_a_036",
+      "status": "free",
+      "enabled": true,
+      "confidence": null,
+      "row": 1,
+      "col": 3,
+      "zone": 3,
+      "zone_id": "parking_a_zone_03",
+      "vehicle": null
+    },
+    {
+      "spot_id": "parking_a_037",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.9024,
+      "row": 1,
+      "col": 4,
+      "zone": 3,
+      "zone_id": "parking_a_zone_03",
+      "vehicle": {
+        "bbox": {
+          "x1": 1667.44,
+          "y1": 575.5,
+          "x2": 1909.81,
+          "y2": 690.37
+        },
+        "confidence": 0.9024,
+        "class_id": 0,
+        "label": "car",
+        "source": "full_frame"
+      }
+    },
+    {
+      "spot_id": "parking_a_038",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.4914,
+      "row": 1,
+      "col": 5,
+      "zone": 3,
+      "zone_id": "parking_a_zone_03",
+      "vehicle": {
+        "bbox": {
+          "x1": 1689.45,
+          "y1": 467.95,
+          "x2": 1915.42,
+          "y2": 572.11
+        },
+        "confidence": 0.4914,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_03"
+      }
+    },
+    {
+      "spot_id": "parking_a_039",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.761,
+      "row": 1,
+      "col": 6,
+      "zone": 3,
+      "zone_id": "parking_a_zone_03",
+      "vehicle": {
+        "bbox": {
+          "x1": 1691.57,
+          "y1": 371.06,
+          "x2": 1899.33,
+          "y2": 467.06
+        },
+        "confidence": 0.761,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_03"
+      }
+    },
+    {
+      "spot_id": "parking_a_040",
+      "status": "occupied",
+      "enabled": true,
+      "confidence": 0.4977,
+      "row": 1,
+      "col": 7,
+      "zone": 3,
+      "zone_id": "parking_a_zone_03",
+      "vehicle": {
+        "bbox": {
+          "x1": 1681.74,
+          "y1": 274.57,
+          "x2": 1744.93,
+          "y2": 362.9
+        },
+        "confidence": 0.4977,
+        "class_id": 0,
+        "label": "car",
+        "source": "zone:parking_a_zone_01"
+      }
+    }
+  ],
+  "source_type": "video",
+  "source_path": "data/videos/parking_test.mp4"
+}
