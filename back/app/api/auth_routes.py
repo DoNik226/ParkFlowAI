@@ -2,13 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, Field
 
 from back.app.api.deps import get_auth_service, get_current_active_user
 from back.app.core.exceptions import AccountLockedError, AuthenticationError
 from back.app.models.user import User
-from back.app.schemas.auth import LoginRequest, TokenResponse
+from back.app.schemas.auth import TokenResponse
 from back.app.schemas.users import AuthUser
 from back.app.services.auth_service import AuthService
+
 
 router = APIRouter(
     prefix="/auth",
@@ -16,15 +18,35 @@ router = APIRouter(
 )
 
 
+class LoginPayload(BaseModel):
+    login: str | None = Field(default=None)
+    username: str | None = Field(default=None)
+    password: str
+
+    def get_login(self) -> str:
+        value = self.login or self.username
+        if not value:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Field 'login' or 'username' is required",
+            )
+        return value
+
+
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    data: LoginRequest,
+    data: LoginPayload,
     request: Request,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ):
     client_ip = request.client.host if request.client else None
+
     try:
-        return await auth_service.login(data.login, data.password, client_ip=client_ip)
+        return await auth_service.login(
+            data.get_login(),
+            data.password,
+            client_ip=client_ip,
+        )
     except AccountLockedError as exc:
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
@@ -47,6 +69,7 @@ async def login_for_access_token(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ):
     client_ip = request.client.host if request.client else None
+
     try:
         return await auth_service.login(
             form_data.username,

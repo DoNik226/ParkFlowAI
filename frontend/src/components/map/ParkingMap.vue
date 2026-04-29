@@ -1,43 +1,56 @@
 <template>
-  <div class="parking-map">
-    <div v-if="!layout" class="map-empty">
-      Карта парковки не загружена
-    </div>
+  <div
+    ref="containerRef"
+    class="parking-map"
+    @wheel.prevent="onWheel"
+    @mousedown="startPan"
+    @mousemove="onPan"
+    @mouseup="stopPan"
+    @mouseleave="stopPan"
+  >
+    <div v-if="!layout" class="empty">Карта не загружена</div>
 
-    <svg
-      v-else
-      class="map-svg"
-      :viewBox="viewBox"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <g v-for="spot in layout.spots" :key="spot.id">
-        <polygon
-          :points="polygonPoints(spot.polygon)"
-          :class="['spot', getSpotStatus(spot.id)]"
-        />
-        <text
-          :x="spotCenter(spot).x"
-          :y="spotCenter(spot).y"
-          text-anchor="middle"
-          dominant-baseline="middle"
-          class="spot-label"
-        >
-          {{ spotLabel(spot) }}
-        </text>
-      </g>
-    </svg>
+    <template v-else>
+      <div class="map-tools">
+        <button type="button" @click.stop="zoomIn">+</button>
+        <button type="button" @click.stop="zoomOut">−</button>
+        <button type="button" @click.stop="resetView">⟳</button>
+      </div>
 
-    <div v-if="summary" class="map-summary">
-      <span>Всего: {{ summary.total }}</span>
-      <span class="free">Свободно: {{ summary.free }}</span>
-      <span class="occupied">Занято: {{ summary.occupied }}</span>
-      <span class="unknown">Неизвестно: {{ summary.unknown }}</span>
-    </div>
+      <svg
+        class="map-svg"
+        :viewBox="viewBox"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <g :transform="transform">
+          <g v-for="spot in layout.spots" :key="spot.id">
+            <polygon
+              :points="polygonPoints(spot.polygon)"
+              :class="['spot', getStatus(spot.id)]"
+              @mousedown.stop
+              @click.stop="$emit('select-spot', spot)"
+            />
+
+            <text
+              :x="center(spot).x"
+              :y="center(spot).y"
+              text-anchor="middle"
+              dominant-baseline="middle"
+              class="spot-label"
+            >
+              {{ label(spot) }}
+            </text>
+          </g>
+        </g>
+      </svg>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+
+defineEmits(['select-spot'])
 
 const props = defineProps({
   layout: {
@@ -50,10 +63,23 @@ const props = defineProps({
   },
 })
 
+const containerRef = ref(null)
+
+const scale = ref(1)
+const offsetX = ref(0)
+const offsetY = ref(0)
+
+const isPanning = ref(false)
+const lastMouse = ref({ x: 0, y: 0 })
+
+const MIN_SCALE = 0.6
+const MAX_SCALE = 5
+const SCALE_STEP = 0.18
+
 const occupancyBySpotId = computed(() => {
   const map = new Map()
 
-  if (!props.occupancy || !Array.isArray(props.occupancy.spots)) {
+  if (!props.occupancy?.spots) {
     return map
   }
 
@@ -64,27 +90,25 @@ const occupancyBySpotId = computed(() => {
   return map
 })
 
-const summary = computed(() => props.occupancy?.summary || null)
-
 const viewBox = computed(() => {
-  const meta = props.layout?.frame_meta
-
-  const width = meta?.width || 1920
-  const height = meta?.height || 1080
-
+  const width = props.layout?.frame_meta?.width || props.layout?.image?.width || 1920
+  const height = props.layout?.frame_meta?.height || props.layout?.image?.height || 1080
   return `0 0 ${width} ${height}`
 })
 
+const transform = computed(() => {
+  return `translate(${offsetX.value} ${offsetY.value}) scale(${scale.value})`
+})
+
 function polygonPoints(polygon) {
-  if (!Array.isArray(polygon)) return ''
-  return polygon.map((p) => `${p.x},${p.y}`).join(' ')
+  return (polygon || []).map((p) => `${p.x},${p.y}`).join(' ')
 }
 
-function getSpotStatus(spotId) {
+function getStatus(spotId) {
   return occupancyBySpotId.value.get(spotId)?.status || 'unknown'
 }
 
-function spotCenter(spot) {
+function center(spot) {
   const polygon = spot.polygon || []
 
   if (!polygon.length) {
@@ -106,52 +130,185 @@ function spotCenter(spot) {
   }
 }
 
-function spotLabel(spot) {
+function label(spot) {
   if (spot.label) return spot.label
   if (spot.number) return spot.number
   if (spot.id) return spot.id.split('_').at(-1)
   return ''
 }
+
+function clampScale(value) {
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value))
+}
+
+function zoomIn() {
+  scale.value = clampScale(scale.value + SCALE_STEP)
+}
+
+function zoomOut() {
+  scale.value = clampScale(scale.value - SCALE_STEP)
+}
+
+function resetView() {
+  scale.value = 1
+  offsetX.value = 0
+  offsetY.value = 0
+}
+
+function onWheel(event) {
+  const direction = event.deltaY < 0 ? 1 : -1
+  const oldScale = scale.value
+  const newScale = clampScale(oldScale + direction * SCALE_STEP)
+
+  if (newScale === oldScale) {
+    return
+  }
+
+  const svg = event.currentTarget.querySelector('svg')
+  if (!svg) {
+    scale.value = newScale
+    return
+  }
+
+  const rect = svg.getBoundingClientRect()
+  const width = props.layout?.frame_meta?.width || props.layout?.image?.width || 1920
+  const height = props.layout?.frame_meta?.height || props.layout?.image?.height || 1080
+
+  const mouseX = ((event.clientX - rect.left) / rect.width) * width
+  const mouseY = ((event.clientY - rect.top) / rect.height) * height
+
+  const scaleRatio = newScale / oldScale
+
+  offsetX.value = mouseX - (mouseX - offsetX.value) * scaleRatio
+  offsetY.value = mouseY - (mouseY - offsetY.value) * scaleRatio
+  scale.value = newScale
+}
+
+function startPan(event) {
+  if (event.button !== 0) {
+    return
+  }
+
+  isPanning.value = true
+  lastMouse.value = {
+    x: event.clientX,
+    y: event.clientY,
+  }
+}
+
+function onPan(event) {
+  if (!isPanning.value) {
+    return
+  }
+
+  const svg = containerRef.value?.querySelector('svg')
+  if (!svg) {
+    return
+  }
+
+  const rect = svg.getBoundingClientRect()
+  const width = props.layout?.frame_meta?.width || props.layout?.image?.width || 1920
+  const height = props.layout?.frame_meta?.height || props.layout?.image?.height || 1080
+
+  const dxPx = event.clientX - lastMouse.value.x
+  const dyPx = event.clientY - lastMouse.value.y
+
+  const dxViewBox = (dxPx / rect.width) * width
+  const dyViewBox = (dyPx / rect.height) * height
+
+  offsetX.value += dxViewBox
+  offsetY.value += dyViewBox
+
+  lastMouse.value = {
+    x: event.clientX,
+    y: event.clientY,
+  }
+}
+
+function stopPan() {
+  isPanning.value = false
+}
 </script>
 
 <style scoped>
 .parking-map {
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 520px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #10131a;
+  border: 2px solid #2d8fe3;
+  cursor: grab;
+  user-select: none;
 }
 
-.map-empty {
+.parking-map:active {
+  cursor: grabbing;
+}
+
+.empty {
+  min-height: 520px;
+  display: grid;
+  place-items: center;
   color: #888;
-  padding: 24px;
-  border: 1px dashed #444;
-  border-radius: 12px;
 }
 
 .map-svg {
   width: 100%;
-  flex: 1;
-  min-height: 480px;
+  height: 100%;
+  min-height: 520px;
+  display: block;
   background: #10131a;
-  border: 1px solid #2a2f3a;
-  border-radius: 16px;
+}
+
+.map-tools {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform: translateY(-50%);
+}
+
+.map-tools button {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: #e9edf2;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.map-tools button:hover {
+  background: #ffffff;
 }
 
 .spot {
   stroke-width: 3;
-  transition: fill 0.2s ease, stroke 0.2s ease;
+  cursor: pointer;
+  transition: opacity 0.2s ease, stroke-width 0.2s ease;
+}
+
+.spot:hover {
+  opacity: 0.8;
+  stroke-width: 5;
 }
 
 .spot.free {
   fill: rgba(70, 200, 100, 0.35);
-  stroke: #46c864;
+  stroke: #31c85f;
 }
 
 .spot.occupied {
-  fill: rgba(230, 70, 70, 0.42);
+  fill: rgba(230, 70, 70, 0.45);
   stroke: #e64646;
 }
 
@@ -161,32 +318,12 @@ function spotLabel(spot) {
 }
 
 .spot-label {
-  fill: #ffffff;
-  font-size: 28px;
-  font-weight: 700;
-  pointer-events: none;
+  fill: #fff;
+  font-size: 26px;
+  font-weight: 800;
   paint-order: stroke;
   stroke: #111;
   stroke-width: 4px;
-}
-
-.map-summary {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  color: #ddd;
-  font-size: 14px;
-}
-
-.map-summary .free {
-  color: #46c864;
-}
-
-.map-summary .occupied {
-  color: #e64646;
-}
-
-.map-summary .unknown {
-  color: #aaa;
+  pointer-events: none;
 }
 </style>

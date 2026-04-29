@@ -89,26 +89,31 @@ export default {
     async handleLogin() {
       this.isLoading = true
       this.errorMessage = ''
-      this.successMessage = '' // Очищаем сообщение об успехе при входе
+      this.successMessage = ''
 
       try {
-        // Запрос к API авторизации
         const data = await authService.login(this.form.username, this.form.password)
-        
-        // Сохранение токена и роли в localStorage
-        localStorage.setItem('access_token', data.token)
-        localStorage.setItem('user_role', data.role)
 
-        // Перенаправление в зависимости от роли
+        localStorage.setItem('access_token', data.token)
+        localStorage.setItem('user_role', data.role || 'user')
+        localStorage.setItem('username', this.form.username)
+
+        if (data.user_id !== null && data.user_id !== undefined) {
+          localStorage.setItem('user_id', data.user_id)
+        } else {
+          localStorage.removeItem('user_id')
+        }
+
         if (data.role === 'admin') {
           this.$router.push('/admin')
         } else {
           this.$router.push('/main')
         }
       } catch (error) {
-        // Обработка ошибок от сервера
-        if (error.response?.status === 403) {
-          this.errorMessage = 'Аккаунт заблокирован из-за множественных попыток входа.'
+        if (error.response?.status === 423) {
+          this.errorMessage = 'Аккаунт временно заблокирован из-за множественных попыток входа.'
+        } else if (error.response?.status === 403) {
+          this.errorMessage = 'Доступ запрещён.'
         } else if (error.response?.status === 401) {
           this.errorMessage = 'Неверный логин или пароль.'
         } else {
