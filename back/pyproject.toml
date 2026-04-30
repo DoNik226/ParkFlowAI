@@ -1,9 +1,9 @@
 [project]
 name = "back"
 version = "0.1.0"
-description = "Add your description here"
+description = "ParkFlow AI backend"
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+requires-python = "==3.11.*"
 dependencies = [
     "fastapi[standard]>=0.135.2",
     "passlib[bcrypt]>=1.7.4",
@@ -13,4 +13,7 @@ dependencies = [
     "sqlalchemy>=2.0.48",
     "psycopg2-binary>=2.9.9",
     "python-dotenv>=1.0.0",
+    "python-multipart>=0.0.20",
+    "numpy>=1.26.0",
+    "opencv-python-headless==4.10.0.84",
 ]

@@ -9,6 +9,7 @@ class AuthUser(BaseModel):
     email: str
     role: str
     is_active: bool
+    company_id: int | None = None
     full_name: str | None = None
 
     class Config:
@@ -20,6 +21,7 @@ class UserBase(BaseModel):
     email: str = Field(max_length=255)
     full_name: str | None = Field(default=None, max_length=255)
     role: str
+    company_id: int | None = None
 
 
 class UserCreate(UserBase):
@@ -48,6 +50,7 @@ class UserListItem(BaseModel):
     is_active: bool
     failed_attempts: int
     locked_until: datetime | None = None
+    company_id: int | None = None
     full_name: str | None = None
 
     class Config:
@@ -62,6 +65,7 @@ class UserResponse(BaseModel):
     is_active: bool
     failed_attempts: int
     locked_until: datetime | None = None
+    company_id: int | None = None
     full_name: str | None = None
 
     class Config:

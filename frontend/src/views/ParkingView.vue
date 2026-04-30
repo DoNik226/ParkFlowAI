@@ -3,12 +3,18 @@
     <div class="page-header">
       <div>
         <h1>Парковки</h1>
-        <p>Список парковок, доступных в системе ParkFlow AI</p>
+        <p>Парковки, доступные текущему администратору</p>
       </div>
 
-      <button class="refresh-btn" @click="loadParkings">
-        Обновить
-      </button>
+      <div class="header-actions">
+        <button class="secondary-btn" @click="loadParkings">
+          Обновить
+        </button>
+
+        <button class="primary-btn" @click="createParking">
+          + Добавить парковку
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="state-card">
@@ -20,7 +26,7 @@
     </div>
 
     <div v-else-if="!parkings.length" class="state-card">
-      Парковки пока не найдены. Проверь папку data/parkings.
+      Парковки пока не созданы.
     </div>
 
     <div v-else class="parking-grid">
@@ -31,12 +37,12 @@
       >
         <div class="card-top">
           <div>
-            <h2>{{ parking.name || parking.id }}</h2>
+            <h2>{{ parking.name }}</h2>
             <p>ID: {{ parking.id }}</p>
           </div>
 
           <span class="badge">
-            {{ parking.spots_count ?? parking.summary?.total ?? 0 }} мест
+            {{ parking.spots_count ?? 0 }} мест
           </span>
         </div>
 
@@ -57,18 +63,29 @@
           </div>
         </div>
 
-        <div class="camera">
-          <span>Камера:</span>
-          <b>{{ parking.camera?.id || '—' }}</b>
+        <div class="meta">
+          <div>
+            <span>Компания</span>
+            <b>{{ parking.company_id }}</b>
+          </div>
+
+          <div>
+            <span>Зоны</span>
+            <b>{{ parking.zones_count ?? 0 }}</b>
+          </div>
         </div>
 
         <div class="actions">
           <button @click="openMap(parking.id)">
-            Открыть карту
+            Карта
           </button>
 
-          <button class="secondary" @click="openAdminParking(parking.id)">
-            Управление
+          <button class="secondary" @click="openSetup(parking.id)">
+            Настройка
+          </button>
+
+          <button class="danger" @click="deleteParking(parking)">
+            Удалить
           </button>
         </div>
       </article>
@@ -85,11 +102,11 @@ const router = useRouter()
 
 const parkings = ref([])
 const loading = ref(false)
-const error = ref(null)
+const error = ref('')
 
 async function loadParkings() {
   loading.value = true
-  error.value = null
+  error.value = ''
 
   try {
     parkings.value = await parkingService.getAllParkings()
@@ -101,18 +118,34 @@ async function loadParkings() {
   }
 }
 
+function createParking() {
+  router.push('/admin/parkings/new')
+}
+
+function openSetup(parkingId) {
+  router.push(`/admin/parkings/${parkingId}/setup`)
+}
+
 function openMap(parkingId) {
   router.push({
     path: '/main',
-    query: { parking_id: parkingId },
+    query: {
+      parking_id: parkingId,
+    },
   })
 }
 
-function openAdminParking(parkingId) {
-  router.push({
-    path: '/admin/parkings',
-    query: { parking_id: parkingId },
-  })
+async function deleteParking(parking) {
+  const ok = window.confirm(`Удалить парковку "${parking.name}"?`)
+  if (!ok) return
+
+  try {
+    await parkingService.deleteParking(parking.id)
+    await loadParkings()
+  } catch (err) {
+    console.error('Ошибка удаления парковки:', err)
+    error.value = 'Не удалось удалить парковку'
+  }
 }
 
 onMounted(() => {
@@ -122,7 +155,7 @@ onMounted(() => {
 
 <style scoped>
 .parking-view {
-  min-height: 100%;
+  min-height: calc(100vh - 70px);
   padding: 28px;
   background: #f5f7fb;
 }
@@ -145,15 +178,28 @@ onMounted(() => {
   color: #6b7280;
 }
 
-.refresh-btn,
-.actions button {
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.primary-btn,
+.secondary-btn {
   border: none;
   border-radius: 10px;
-  background: #2d8fe3;
-  color: #fff;
-  padding: 10px 14px;
+  padding: 11px 16px;
   cursor: pointer;
   font-weight: 700;
+}
+
+.primary-btn {
+  background: #2d8fe3;
+  color: #fff;
+}
+
+.secondary-btn {
+  background: #eef2f7;
+  color: #1f2937;
 }
 
 .state-card {
@@ -170,7 +216,7 @@ onMounted(() => {
 
 .parking-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 18px;
 }
 
@@ -213,17 +259,19 @@ onMounted(() => {
 .summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 9px;
   margin-bottom: 16px;
 }
 
-.summary div {
+.summary div,
+.meta div {
   padding: 12px;
   border-radius: 12px;
   background: #f9fafb;
 }
 
-.summary span {
+.summary span,
+.meta span {
   display: block;
   font-size: 12px;
   color: #6b7280;
@@ -246,33 +294,37 @@ onMounted(() => {
   color: #6b7280;
 }
 
-.camera {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 0;
-  border-top: 1px solid #eef0f4;
-  border-bottom: 1px solid #eef0f4;
-  color: #6b7280;
-}
-
-.camera b {
-  color: #111827;
+.meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 9px;
+  margin-bottom: 16px;
 }
 
 .actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
-  margin-top: 16px;
 }
 
 .actions button {
-  flex: 1;
+  border: none;
+  border-radius: 10px;
+  background: #2d8fe3;
+  color: #fff;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .actions .secondary {
   background: #eef2f7;
   color: #1f2937;
+}
+
+.actions .danger {
+  background: #ef4444;
+  color: #fff;
 }
 
 @media (max-width: 720px) {
@@ -284,12 +336,15 @@ onMounted(() => {
     flex-direction: column;
   }
 
-  .summary {
-    grid-template-columns: 1fr;
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
   }
 
+  .summary,
+  .meta,
   .actions {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 }
 </style>

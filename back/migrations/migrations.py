@@ -122,9 +122,9 @@ class DatabaseMigration:
     def create_enums(self):
         """Создание ENUM типов с проверкой существования"""
         enums = [
-            ('userrole', "CREATE TYPE UserRole AS ENUM ('user', 'admin')"),
-            ('camerastatus', "CREATE TYPE CameraStatus AS ENUM ('online', 'offline')"),
-            ('spotstatus', "CREATE TYPE SpotStatus AS ENUM ('free', 'occupied')")
+            ('userrole', "CREATE TYPE UserRole AS ENUM ('user', 'admin', 'super_admin')"),
+            ('camerastatus', "CREATE TYPE CameraStatus AS ENUM ('online', 'offline', 'error')"),
+            ('spotstatus', "CREATE TYPE SpotStatus AS ENUM ('free', 'occupied', 'unknown')")
         ]
 
         for enum_name, enum_sql in enums:
@@ -138,6 +138,94 @@ class DatabaseMigration:
                     raise
             else:
                 print(f"  ENUM тип '{enum_name}' уже существует, пропускаем создание")
+        self.ensure_enum_value("userrole", "super_admin")
+        self.ensure_enum_value("camerastatus", "error")
+        self.ensure_enum_value("spotstatus", "unknown")
+
+    def ensure_enum_value(self, enum_name: str, value: str):
+        try:
+            self.cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_enum
+                    JOIN pg_type ON pg_enum.enumtypid = pg_type.oid
+                    WHERE pg_type.typname = %s
+                    AND pg_enum.enumlabel = %s
+                )
+                """,
+                (enum_name.lower(), value),
+            )
+
+            exists = self.cursor.fetchone()[0]
+
+            if exists:
+                print(f"  Значение '{value}' уже есть в ENUM '{enum_name}', пропускаем")
+                return
+
+            self.cursor.execute(f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS %s", (value,))
+            print(f"  ✓ Значение '{value}' добавлено в ENUM '{enum_name}'")
+        except Exception as e:
+            print(f"  Ошибка при обновлении ENUM {enum_name}: {e}")
+            raise
+    
+    def create_companies_table(self):
+        table_name = "companies"
+
+        if self.table_exists(table_name):
+            print(f"  Таблица '{table_name}' уже существует, пропускаем создание")
+            return
+
+        create_table_sql = """
+        CREATE TABLE companies (
+            id BIGSERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            slug VARCHAR(100) UNIQUE NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE
+        )
+        """
+
+        indexes = [
+            ("idx_companies_slug", "CREATE INDEX idx_companies_slug ON companies(slug)"),
+            ("idx_companies_is_active", "CREATE INDEX idx_companies_is_active ON companies(is_active)")
+        ]
+
+        try:
+            self.cursor.execute(create_table_sql)
+            print(f"✓ Таблица '{table_name}' создана")
+            self.migration_history.append(f"created_table_{table_name}")
+
+            for index_name, index_sql in indexes:
+                if not self.index_exists(index_name):
+                    self.cursor.execute(index_sql)
+                    print(f"  ✓ Индекс '{index_name}' создан")
+                else:
+                    print(f"  Индекс '{index_name}' уже существует, пропускаем")
+        except Exception as e:
+            print(f"✗ Ошибка создания таблицы {table_name}: {e}")
+            raise
+
+    def ensure_default_company(self):
+        self.cursor.execute("SELECT id FROM companies WHERE slug = 'default' LIMIT 1")
+        row = self.cursor.fetchone()
+
+        if row:
+            print("  Компания default уже существует")
+            return row[0]
+
+        self.cursor.execute(
+            """
+            INSERT INTO companies (name, slug, is_active)
+            VALUES ('Default Company', 'default', TRUE)
+            RETURNING id
+            """
+        )
+
+        company_id = self.cursor.fetchone()[0]
+        print("✓ Компания default создана")
+        return company_id
 
     def create_users_table(self):
         """Создание таблицы users с проверкой существования"""
@@ -193,7 +281,17 @@ class DatabaseMigration:
 
     def ensure_users_table_columns(self):
         table_name = "users"
+
+        default_company_id = None
+
+        if self.table_exists("companies"):
+            default_company_id = self.ensure_default_company()
+
         alter_statements = [
+            (
+                "company_id",
+                "ALTER TABLE users ADD COLUMN company_id BIGINT REFERENCES companies(id) ON DELETE SET NULL"
+            ),
             (
                 "created_at",
                 "ALTER TABLE users ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
@@ -208,8 +306,20 @@ class DatabaseMigration:
             if self.column_exists(table_name, column_name):
                 print(f"  Колонка '{table_name}.{column_name}' уже существует, пропускаем")
                 continue
+
             self.cursor.execute(sql)
             print(f"  ✓ Колонка '{table_name}.{column_name}' создана")
+
+        if default_company_id is not None:
+            self.cursor.execute(
+                """
+                UPDATE users
+                SET company_id = %s
+                WHERE company_id IS NULL
+                """,
+                (default_company_id,),
+            )
+            print("  ✓ Существующие пользователи привязаны к default company")
 
     def create_login_attempts_table(self):
         """Создание таблицы login_attempts для будущего rate limiting по IP."""
@@ -282,24 +392,37 @@ class DatabaseMigration:
         print("✓ Начальный администратор создан")
 
     def create_parkings_table(self):
-        """Создание таблицы parkings с проверкой существования"""
         table_name = "parkings"
 
         if self.table_exists(table_name):
-            print(f"  Таблица '{table_name}' уже существует, пропускаем создание")
+            print(f"  Таблица '{table_name}' уже существует, проверяем колонки")
+            self.ensure_parkings_table_columns()
             return
+
+        default_company_id = self.ensure_default_company()
 
         create_table_sql = """
         CREATE TABLE parkings (
             id BIGSERIAL PRIMARY KEY,
+            company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
             name VARCHAR(100) NOT NULL,
+            slug VARCHAR(100) NOT NULL,
             description TEXT,
-            config_file_path VARCHAR(255),
-            is_active BOOLEAN DEFAULT TRUE
+            layout_file_path VARCHAR(500),
+            map_file_path VARCHAR(500),
+            occupancy_file_path VARCHAR(500),
+            screenshot_file_path VARCHAR(500),
+            debug_frame_path VARCHAR(500),
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE,
+            CONSTRAINT unique_company_parking_slug UNIQUE(company_id, slug)
         )
         """
 
         indexes = [
+            ("idx_parkings_company_id", "CREATE INDEX idx_parkings_company_id ON parkings(company_id)"),
+            ("idx_parkings_slug", "CREATE INDEX idx_parkings_slug ON parkings(slug)"),
             ("idx_parkings_name", "CREATE INDEX idx_parkings_name ON parkings(name)"),
             ("idx_parkings_is_active", "CREATE INDEX idx_parkings_is_active ON parkings(is_active)")
         ]
@@ -315,10 +438,64 @@ class DatabaseMigration:
                     print(f"  ✓ Индекс '{index_name}' создан")
                 else:
                     print(f"  Индекс '{index_name}' уже существует, пропускаем")
-
         except Exception as e:
             print(f"✗ Ошибка создания таблицы {table_name}: {e}")
             raise
+
+    def ensure_parkings_table_columns(self):
+        table_name = "parkings"
+        default_company_id = self.ensure_default_company()
+
+        columns = [
+            ("company_id", "ALTER TABLE parkings ADD COLUMN company_id BIGINT REFERENCES companies(id) ON DELETE CASCADE"),
+            ("slug", "ALTER TABLE parkings ADD COLUMN slug VARCHAR(100)"),
+            ("layout_file_path", "ALTER TABLE parkings ADD COLUMN layout_file_path VARCHAR(500)"),
+            ("map_file_path", "ALTER TABLE parkings ADD COLUMN map_file_path VARCHAR(500)"),
+            ("occupancy_file_path", "ALTER TABLE parkings ADD COLUMN occupancy_file_path VARCHAR(500)"),
+            ("screenshot_file_path", "ALTER TABLE parkings ADD COLUMN screenshot_file_path VARCHAR(500)"),
+            ("debug_frame_path", "ALTER TABLE parkings ADD COLUMN debug_frame_path VARCHAR(500)"),
+            ("created_at", "ALTER TABLE parkings ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"),
+            ("updated_at", "ALTER TABLE parkings ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE"),
+        ]
+
+        for column_name, sql in columns:
+            if self.column_exists(table_name, column_name):
+                print(f"  Колонка '{table_name}.{column_name}' уже существует, пропускаем")
+                continue
+
+            self.cursor.execute(sql)
+            print(f"  ✓ Колонка '{table_name}.{column_name}' создана")
+
+        self.cursor.execute(
+            """
+            UPDATE parkings
+            SET company_id = %s
+            WHERE company_id IS NULL
+            """,
+            (default_company_id,),
+        )
+
+        self.cursor.execute(
+            """
+            UPDATE parkings
+            SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '_', 'g'))
+            WHERE slug IS NULL OR slug = ''
+            """
+        )
+
+        self.cursor.execute(
+            """
+            UPDATE parkings
+            SET layout_file_path = config_file_path
+            WHERE layout_file_path IS NULL AND config_file_path IS NOT NULL
+            """
+        )
+
+        if not self.index_exists("idx_parkings_company_id"):
+            self.cursor.execute("CREATE INDEX idx_parkings_company_id ON parkings(company_id)")
+
+        if not self.index_exists("idx_parkings_slug"):
+            self.cursor.execute("CREATE INDEX idx_parkings_slug ON parkings(slug)")
 
     def create_road_vertices_table(self):
         """Создание таблицы road_vertices с проверкой существования"""
@@ -404,26 +581,33 @@ class DatabaseMigration:
             raise
 
     def create_cameras_table(self):
-        """Создание таблицы cameras с проверкой существования"""
         table_name = "cameras"
 
         if self.table_exists(table_name):
-            print(f"  Таблица '{table_name}' уже существует, пропускаем создание")
+            print(f"  Таблица '{table_name}' уже существует, проверяем колонки")
+            self.ensure_cameras_table_columns()
             return
 
         create_table_sql = """
         CREATE TABLE cameras (
             id BIGSERIAL PRIMARY KEY,
+            parking_id BIGINT NOT NULL REFERENCES parkings(id) ON DELETE CASCADE,
             name VARCHAR(100) NOT NULL,
-            rtsp_url VARCHAR(500),
-            parking_id BIGINT REFERENCES parkings(id) ON DELETE CASCADE,
-            status CameraStatus DEFAULT 'offline'
+            source_type VARCHAR(20) NOT NULL DEFAULT 'rtsp',
+            source_url VARCHAR(1000),
+            test_video_path VARCHAR(500),
+            status CameraStatus DEFAULT 'offline',
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            last_snapshot_path VARCHAR(500),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE
         )
         """
 
         indexes = [
             ("idx_cameras_parking_id", "CREATE INDEX idx_cameras_parking_id ON cameras(parking_id)"),
-            ("idx_cameras_status", "CREATE INDEX idx_cameras_status ON cameras(status)")
+            ("idx_cameras_status", "CREATE INDEX idx_cameras_status ON cameras(status)"),
+            ("idx_cameras_source_type", "CREATE INDEX idx_cameras_source_type ON cameras(source_type)")
         ]
 
         try:
@@ -441,6 +625,40 @@ class DatabaseMigration:
         except Exception as e:
             print(f"✗ Ошибка создания таблицы {table_name}: {e}")
             raise
+
+    def ensure_cameras_table_columns(self):
+        table_name = "cameras"
+
+        columns = [
+            ("source_type", "ALTER TABLE cameras ADD COLUMN source_type VARCHAR(20) NOT NULL DEFAULT 'rtsp'"),
+            ("source_url", "ALTER TABLE cameras ADD COLUMN source_url VARCHAR(1000)"),
+            ("test_video_path", "ALTER TABLE cameras ADD COLUMN test_video_path VARCHAR(500)"),
+            ("is_active", "ALTER TABLE cameras ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE"),
+            ("last_snapshot_path", "ALTER TABLE cameras ADD COLUMN last_snapshot_path VARCHAR(500)"),
+            ("created_at", "ALTER TABLE cameras ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"),
+            ("updated_at", "ALTER TABLE cameras ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE"),
+        ]
+
+        for column_name, sql in columns:
+            if self.column_exists(table_name, column_name):
+                print(f"  Колонка '{table_name}.{column_name}' уже существует, пропускаем")
+                continue
+
+            self.cursor.execute(sql)
+            print(f"  ✓ Колонка '{table_name}.{column_name}' создана")
+
+        if self.column_exists(table_name, "rtsp_url"):
+            self.cursor.execute(
+                """
+                UPDATE cameras
+                SET source_url = rtsp_url
+                WHERE source_url IS NULL AND rtsp_url IS NOT NULL
+                """
+            )
+            print("  ✓ rtsp_url перенесён в source_url")
+
+        if not self.index_exists("idx_cameras_source_type"):
+            self.cursor.execute("CREATE INDEX idx_cameras_source_type ON cameras(source_type)")
 
     def create_parking_spots_table(self):
         """Создание таблицы parking_spots с проверкой существования"""
@@ -609,7 +827,7 @@ class DatabaseMigration:
             Словарь со статусом каждой таблицы
         """
         tables = [
-            'users', 'login_attempts', 'parkings', 'road_vertices', 'road_edges',
+            'companies', 'users', 'login_attempts', 'parkings', 'road_vertices', 'road_edges',
             'cameras', 'parking_spots', 'entrances', 'parking_occupancy_cache'
         ]
 
@@ -644,6 +862,9 @@ class DatabaseMigration:
             self.create_enums()
 
             # Создаем таблицы в правильном порядке (с учетом зависимостей)
+            self.create_companies_table()
+            self.ensure_default_company()
+
             self.create_users_table()
             self.create_login_attempts_table()
             self.create_parkings_table()

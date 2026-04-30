@@ -5,6 +5,11 @@ import MainView from '@/views/MainView.vue'
 import MobileMainView from '@/views/MobileMainView.vue'
 import AdminView from '@/views/AdminView.vue'
 import ParkingView from '@/views/ParkingView.vue'
+import DigitalMapEditorView from '@/views/DigitalMapEditorView.vue'
+
+import ParkingLayoutEditorView from '@/views/ParkingLayoutEditorView.vue'
+import ParkingCreateView from '@/views/ParkingCreateView.vue'
+import ParkingSetupView from '@/views/ParkingSetupView.vue'
 
 import UserManagement from '@/components/admin/UserManagement.vue'
 import CameraManagement from '@/components/admin/CameraManagement.vue'
@@ -54,6 +59,30 @@ const routes = [
         path: 'users',
         name: 'AdminUsers',
         component: UserManagement,
+        meta: { requiresAuth: true, role: 'admin' },
+      },
+      {
+        path: 'parkings/new',
+        name: 'AdminParkingCreate',
+        component: ParkingCreateView,
+        meta: { requiresAuth: true, role: 'admin' },
+      },
+      {
+        path: 'parkings/:parkingId/setup',
+        name: 'AdminParkingSetup',
+        component: ParkingSetupView,
+        meta: { requiresAuth: true, role: 'admin' },
+      },
+      {
+        path: 'parkings/:parkingId/layout-editor',
+        name: 'AdminParkingLayoutEditor',
+        component: ParkingLayoutEditorView,
+        meta: { requiresAuth: true, role: 'admin' },
+      },
+      {
+        path: 'parkings/:parkingId/map-editor',
+        name: 'AdminParkingMapEditor',
+        component: DigitalMapEditorView,
         meta: { requiresAuth: true, role: 'admin' },
       },
       {

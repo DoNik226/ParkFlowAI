@@ -1,0 +1,395 @@
+{
+  "version": 1,
+  "parking": {
+    "id": "parking_test",
+    "name": "Парковка тестовая",
+    "db_id": 1,
+    "company_id": 1
+  },
+  "frame_meta": {
+    "width": 1920,
+    "height": 1080
+  },
+  "entrances": [
+    {
+      "id": "entrance_1777550080168_1",
+      "name": "Въезд 1",
+      "vertex_id": "entrance_1777550080168_1",
+      "x": 1456.6,
+      "y": 1058.21,
+      "parking_id": "parking_test"
+    }
+  ],
+  "vertices": [
+    {
+      "id": "entrance_1777550080168_1",
+      "type": "entrance",
+      "x": 1456.6,
+      "y": 1058.21,
+      "name": "Въезд 1",
+      "spot_id": null
+    },
+    {
+      "id": "road_1777550086724_2",
+      "type": "road",
+      "x": 1440.79,
+      "y": 427.58,
+      "name": "",
+      "spot_id": null
+    },
+    {
+      "id": "road_1777550095299_3",
+      "type": "road",
+      "x": 39,
+      "y": 420.55,
+      "name": "",
+      "spot_id": null
+    },
+    {
+      "id": "spot_access_spot_001",
+      "type": "spot_access",
+      "x": 54.81,
+      "y": 258.94,
+      "name": "001",
+      "spot_id": "spot_001"
+    },
+    {
+      "id": "spot_access_spot_002",
+      "type": "spot_access",
+      "x": 168.99,
+      "y": 262.45,
+      "name": "002",
+      "spot_id": "spot_002"
+    },
+    {
+      "id": "spot_access_spot_003",
+      "type": "spot_access",
+      "x": 286.68,
+      "y": 260.7,
+      "name": "003",
+      "spot_id": "spot_003"
+    },
+    {
+      "id": "spot_access_spot_004",
+      "type": "spot_access",
+      "x": 402.62,
+      "y": 260.7,
+      "name": "004",
+      "spot_id": "spot_004"
+    },
+    {
+      "id": "spot_access_spot_005",
+      "type": "spot_access",
+      "x": 518.56,
+      "y": 258.94,
+      "name": "005",
+      "spot_id": "spot_005"
+    },
+    {
+      "id": "spot_access_spot_006",
+      "type": "spot_access",
+      "x": 630.98,
+      "y": 258.94,
+      "name": "006",
+      "spot_id": "spot_006"
+    },
+    {
+      "id": "spot_access_spot_007",
+      "type": "spot_access",
+      "x": 752.19,
+      "y": 260.7,
+      "name": "007",
+      "spot_id": "spot_007"
+    },
+    {
+      "id": "spot_access_spot_008",
+      "type": "spot_access",
+      "x": 864.61,
+      "y": 262.45,
+      "name": "008",
+      "spot_id": "spot_008"
+    },
+    {
+      "id": "spot_access_spot_009",
+      "type": "spot_access",
+      "x": 984.07,
+      "y": 264.21,
+      "name": "009",
+      "spot_id": "spot_009"
+    },
+    {
+      "id": "spot_access_spot_010",
+      "type": "spot_access",
+      "x": 1098.25,
+      "y": 260.7,
+      "name": "010",
+      "spot_id": "spot_010"
+    },
+    {
+      "id": "spot_access_spot_011",
+      "type": "spot_access",
+      "x": 1212.43,
+      "y": 258.94,
+      "name": "011",
+      "spot_id": "spot_011"
+    },
+    {
+      "id": "spot_access_spot_012",
+      "type": "spot_access",
+      "x": 1333.64,
+      "y": 260.7,
+      "name": "012",
+      "spot_id": "spot_012"
+    },
+    {
+      "id": "spot_access_spot_013",
+      "type": "spot_access",
+      "x": 1449.57,
+      "y": 260.7,
+      "name": "013",
+      "spot_id": "spot_013"
+    },
+    {
+      "id": "spot_access_spot_014",
+      "type": "spot_access",
+      "x": 1562,
+      "y": 258.94,
+      "name": "014",
+      "spot_id": "spot_014"
+    },
+    {
+      "id": "spot_access_spot_015",
+      "type": "spot_access",
+      "x": 75.32,
+      "y": 712.62,
+      "name": "015",
+      "spot_id": "spot_015"
+    },
+    {
+      "id": "spot_access_spot_016",
+      "type": "spot_access",
+      "x": 193.14,
+      "y": 712.94,
+      "name": "016",
+      "spot_id": "spot_016"
+    },
+    {
+      "id": "spot_access_spot_017",
+      "type": "spot_access",
+      "x": 310.95,
+      "y": 713.25,
+      "name": "017",
+      "spot_id": "spot_017"
+    },
+    {
+      "id": "spot_access_spot_018",
+      "type": "spot_access",
+      "x": 428.76,
+      "y": 713.56,
+      "name": "018",
+      "spot_id": "spot_018"
+    },
+    {
+      "id": "spot_access_spot_019",
+      "type": "spot_access",
+      "x": 546.57,
+      "y": 713.87,
+      "name": "019",
+      "spot_id": "spot_019"
+    },
+    {
+      "id": "spot_access_spot_020",
+      "type": "spot_access",
+      "x": 664.39,
+      "y": 714.19,
+      "name": "020",
+      "spot_id": "spot_020"
+    },
+    {
+      "id": "spot_access_spot_021",
+      "type": "spot_access",
+      "x": 782.2,
+      "y": 714.5,
+      "name": "021",
+      "spot_id": "spot_021"
+    },
+    {
+      "id": "spot_access_spot_022",
+      "type": "spot_access",
+      "x": 900.01,
+      "y": 714.81,
+      "name": "022",
+      "spot_id": "spot_022"
+    },
+    {
+      "id": "spot_access_spot_023",
+      "type": "spot_access",
+      "x": 1017.82,
+      "y": 715.12,
+      "name": "023",
+      "spot_id": "spot_023"
+    },
+    {
+      "id": "spot_access_spot_024",
+      "type": "spot_access",
+      "x": 1135.64,
+      "y": 715.44,
+      "name": "024",
+      "spot_id": "spot_024"
+    },
+    {
+      "id": "spot_access_spot_025",
+      "type": "spot_access",
+      "x": 67.82,
+      "y": 955.13,
+      "name": "025",
+      "spot_id": "spot_025"
+    },
+    {
+      "id": "spot_access_spot_026",
+      "type": "spot_access",
+      "x": 186.26,
+      "y": 956.06,
+      "name": "026",
+      "spot_id": "spot_026"
+    },
+    {
+      "id": "spot_access_spot_027",
+      "type": "spot_access",
+      "x": 304.7,
+      "y": 957,
+      "name": "027",
+      "spot_id": "spot_027"
+    },
+    {
+      "id": "spot_access_spot_028",
+      "type": "spot_access",
+      "x": 423.14,
+      "y": 957.94,
+      "name": "028",
+      "spot_id": "spot_028"
+    },
+    {
+      "id": "spot_access_spot_029",
+      "type": "spot_access",
+      "x": 541.58,
+      "y": 958.88,
+      "name": "029",
+      "spot_id": "spot_029"
+    },
+    {
+      "id": "spot_access_spot_030",
+      "type": "spot_access",
+      "x": 660.01,
+      "y": 959.81,
+      "name": "030",
+      "spot_id": "spot_030"
+    },
+    {
+      "id": "spot_access_spot_031",
+      "type": "spot_access",
+      "x": 778.45,
+      "y": 960.75,
+      "name": "031",
+      "spot_id": "spot_031"
+    },
+    {
+      "id": "spot_access_spot_032",
+      "type": "spot_access",
+      "x": 896.89,
+      "y": 961.69,
+      "name": "032",
+      "spot_id": "spot_032"
+    },
+    {
+      "id": "spot_access_spot_033",
+      "type": "spot_access",
+      "x": 1015.33,
+      "y": 962.63,
+      "name": "033",
+      "spot_id": "spot_033"
+    },
+    {
+      "id": "spot_access_spot_034",
+      "type": "spot_access",
+      "x": 1128.11,
+      "y": 1068.75,
+      "name": "034",
+      "spot_id": "spot_034"
+    },
+    {
+      "id": "spot_access_spot_035",
+      "type": "spot_access",
+      "x": 1761.96,
+      "y": 326.76,
+      "name": "035",
+      "spot_id": "spot_035"
+    },
+    {
+      "id": "spot_access_spot_036",
+      "type": "spot_access",
+      "x": 1763.96,
+      "y": 435.02,
+      "name": "036",
+      "spot_id": "spot_036"
+    },
+    {
+      "id": "spot_access_spot_037",
+      "type": "spot_access",
+      "x": 1765.97,
+      "y": 543.28,
+      "name": "037",
+      "spot_id": "spot_037"
+    },
+    {
+      "id": "spot_access_spot_038",
+      "type": "spot_access",
+      "x": 1767.98,
+      "y": 651.53,
+      "name": "038",
+      "spot_id": "spot_038"
+    },
+    {
+      "id": "spot_access_spot_039",
+      "type": "spot_access",
+      "x": 1769.99,
+      "y": 759.79,
+      "name": "039",
+      "spot_id": "spot_039"
+    },
+    {
+      "id": "spot_access_spot_040",
+      "type": "spot_access",
+      "x": 1772,
+      "y": 868.05,
+      "name": "040",
+      "spot_id": "spot_040"
+    },
+    {
+      "id": "spot_access_spot_041",
+      "type": "spot_access",
+      "x": 1774.01,
+      "y": 976.31,
+      "name": "041",
+      "spot_id": "spot_041"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1777550099740_1",
+      "source": "road_1777550095299_3",
+      "destination": "road_1777550086724_2",
+      "length_meters": 1401.81,
+      "is_bidirectional": true,
+      "one_way": false
+    },
+    {
+      "id": "edge_1777550103249_2",
+      "source": "road_1777550086724_2",
+      "destination": "entrance_1777550080168_1",
+      "length_meters": 630.83,
+      "is_bidirectional": true,
+      "one_way": false
+    }
+  ]
+}

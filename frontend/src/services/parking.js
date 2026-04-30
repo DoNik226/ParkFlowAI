@@ -1,98 +1,127 @@
 import apiClient from './api-client'
 
-/**
- * Сервис работы с парковками
- */
 export const parkingService = {
-  /**
-   * Получить список всех парковок
-   * GET /parkings
-   */
   async getAllParkings() {
     const response = await apiClient.get('/parkings')
     return response.data
   },
 
-  /**
-   * Получить данные конкретной парковки
-   * GET /parkings/{id}
-   */
-  async getParkingById(id) {
-    const response = await apiClient.get(`/parkings/${id}`)
+  async getParking(parkingId) {
+    const response = await apiClient.get(`/parkings/${parkingId}`)
     return response.data
   },
 
-  /**
-   * Создать парковку (только админ)
-   * POST /parkings
-   */
-  async createParking(parkingData) {
-    const response = await apiClient.post('/parkings', parkingData)
+  async createParking(data) {
+    const response = await apiClient.post('/parkings', data)
     return response.data
   },
 
-  /**
-   * Обновить парковку (только админ)
-   * PUT /parkings/{id}
-   */
-  async updateParking(id, parkingData) {
-    const response = await apiClient.put(`/parkings/${id}`, parkingData)
+  async updateParking(parkingId, data) {
+    const response = await apiClient.put(`/parkings/${parkingId}`, data)
     return response.data
   },
 
-  /**
-   * Удалить парковку (только админ)
-   * DELETE /parkings/{id}
-   */
-  async deleteParking(id) {
-    const response = await apiClient.delete(`/parkings/${id}`)
+  async deleteParking(parkingId) {
+    const response = await apiClient.delete(`/parkings/${parkingId}`)
     return response.data
   },
 
-  /**
-   * Получить кэш загруженности парковки
-   * GET /parkings/{id}/occupancy
-   */
-  async getParkingOccupancy(id) {
-    const response = await apiClient.get(`/parkings/${id}/occupancy`)
+  async getLayout(parkingId) {
+    const response = await apiClient.get(`/parkings/${parkingId}/layout`)
     return response.data
   },
 
-  /**
-   * Получить места парковки
-   * GET /parkings/{id}/spots
-   */
-  async getParkingSpots(id) {
-    const response = await apiClient.get(`/parkings/${id}/spots`)
-    return response.data
-  },
-
-  /**
-   * Получить свободные места с расстояниями
-   * GET /parkings/{id}/free-spots?entrance_id=1
-   */
-  async getFreeSpots(parkingId, entranceId) {
-    const response = await apiClient.get(`/parkings/${parkingId}/free-spots`, {
-      params: { entrance_id: entranceId }
+  async saveLayout(parkingId, layout) {
+    const response = await apiClient.put(`/parkings/${parkingId}/layout`, {
+      layout,
     })
     return response.data
   },
 
-  /**
-   * Изменить статус места (только админ)
-   * PUT /parking-spots/{id}/status
-   */
-  async updateSpotStatus(id, status) {
-    const response = await apiClient.put(`/parking-spots/${id}/status`, { status })
+  async getMap(parkingId) {
+    const response = await apiClient.get(`/parkings/${parkingId}/map`)
     return response.data
   },
 
-  /**
-   * Получить точки въезда
-   * GET /parkings/{id}/entrances
-   */
+  async saveMap(parkingId, map) {
+    const response = await apiClient.put(`/parkings/${parkingId}/map`, {
+      map,
+    })
+    return response.data
+  },
+
+  async getOccupancy(parkingId) {
+    const response = await apiClient.get(`/parkings/${parkingId}/occupancy`)
+    return response.data
+  },
+
+  async getSpots(parkingId) {
+    const response = await apiClient.get(`/parkings/${parkingId}/spots`)
+    return response.data
+  },
+
+  async getFreeSpots(parkingId) {
+    const response = await apiClient.get(`/parkings/${parkingId}/free-spots`)
+    return response.data
+  },
+
   async getEntrances(parkingId) {
     const response = await apiClient.get(`/parkings/${parkingId}/entrances`)
     return response.data
-  }
+  },
+
+  async uploadSourceVideo(parkingId, file) {
+    const formData = new FormData()
+    formData.append('file', file, file.name)
+
+    const response = await apiClient.post(
+      `/parkings/${parkingId}/source-video`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    )
+
+    return response.data
+  },
+
+  async uploadSnapshot(parkingId, file) {
+    const formData = new FormData()
+    formData.append('file', file, file.name)
+
+    const response = await apiClient.post(
+      `/parkings/${parkingId}/snapshot/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    )
+
+    return response.data
+  },
+
+  async captureSnapshot(parkingId) {
+    const response = await apiClient.post(`/parkings/${parkingId}/snapshot/capture`)
+    return response.data
+  },
+
+  async getSnapshotBlob(parkingId) {
+    const response = await apiClient.get(`/parkings/${parkingId}/snapshot`, {
+      responseType: 'blob',
+    })
+
+    return response.data
+  },
+
+  async getDebugFrameBlob(parkingId) {
+    const response = await apiClient.get(`/parkings/${parkingId}/debug-frame`, {
+      responseType: 'blob',
+    })
+
+    return response.data
+  },
 }

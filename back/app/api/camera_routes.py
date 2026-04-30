@@ -1,211 +1,193 @@
-from pathlib import Path
-import json
-from typing import Any
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from back.app.api.deps import get_current_active_user, require_admin, assert_same_company_or_super_admin
+from back.app.database import get_db
+from back.app.models.enums import CameraSourceType, CameraStatus
+from back.app.models.user import User
+from back.app.repositories.camera_repository import CameraRepository
+from back.app.repositories.parking_repository import ParkingRepository
+from back.app.schemas.cameras import CameraCreate, CameraUpdate, CameraResponse
 
 router = APIRouter(prefix="/cameras", tags=["cameras"])
 
-DATA_ROOT = Path("/app/data/parkings")
 
+def resolve_camera(camera_id: int, db: Session, current_user: User):
+    camera_repo = CameraRepository(db)
+    parking_repo = ParkingRepository(db)
 
-class CameraCreate(BaseModel):
-    id: str
-    parking_id: str
-    name: str | None = None
-    source_url: str | None = None
-    source_type: str | None = None
+    camera = camera_repo.get_by_id(camera_id)
 
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
 
-class CameraUpdate(BaseModel):
-    name: str | None = None
-    source_url: str | None = None
-    source_type: str | None = None
+    parking = parking_repo.get_by_id(camera.parking_id)
 
-
-def safe_id(value: str) -> str:
-    normalized = value.replace("_", "").replace("-", "")
-
-    if not normalized.isalnum():
-        raise HTTPException(status_code=400, detail="Invalid id")
-
-    return value
-
-
-def read_json(path: Path):
-    if not path.exists():
-        raise HTTPException(status_code=404, detail=f"File not found: {path.name}")
-
-    with path.open("r", encoding="utf-8") as file:
-        return json.load(file)
-
-
-def write_json(path: Path, data: Any) -> None:
-    temp_path = path.with_suffix(path.suffix + ".tmp")
-
-    with temp_path.open("w", encoding="utf-8") as file:
-        json.dump(data, file, ensure_ascii=False, indent=2)
-
-    temp_path.replace(path)
-
-
-def get_parking_dirs():
-    DATA_ROOT.mkdir(parents=True, exist_ok=True)
-
-    return [
-        item
-        for item in DATA_ROOT.iterdir()
-        if item.is_dir() and (item / "layout.json").exists()
-    ]
-
-
-def normalize_camera(parking_id: str, camera: dict[str, Any] | None):
-    camera = camera or {}
-
-    return {
-        "id": camera.get("id", f"{parking_id}_camera"),
-        "parking_id": camera.get("parking_id", parking_id),
-        "name": camera.get("name", f"Камера {parking_id}"),
-        "source_url": camera.get("source_url") or camera.get("url") or camera.get("source"),
-        "source_type": camera.get("source_type") or camera.get("type") or "unknown",
-    }
-
-
-@router.get("")
-def list_cameras(parking_id: str | None = Query(default=None)):
-    cameras = []
-
-    for parking_dir in get_parking_dirs():
-        layout = read_json(parking_dir / "layout.json")
-        current_parking_id = layout.get("parking", {}).get("id", parking_dir.name)
-
-        if parking_id and current_parking_id != parking_id:
-            continue
-
-        cameras.append(normalize_camera(current_parking_id, layout.get("camera")))
-
-    return cameras
-
-
-@router.get("/{camera_id}")
-def get_camera(camera_id: str):
-    for parking_dir in get_parking_dirs():
-        layout = read_json(parking_dir / "layout.json")
-        parking_id = layout.get("parking", {}).get("id", parking_dir.name)
-        camera = normalize_camera(parking_id, layout.get("camera"))
-
-        if camera["id"] == camera_id:
-            return camera
-
-    raise HTTPException(status_code=404, detail="Camera not found")
-
-
-@router.post("", status_code=201)
-def create_camera(data: CameraCreate):
-    parking_id = safe_id(data.parking_id)
-    camera_id = safe_id(data.id)
-
-    parking_dir = DATA_ROOT / parking_id
-    layout_file = parking_dir / "layout.json"
-
-    if not layout_file.exists():
+    if not parking:
         raise HTTPException(status_code=404, detail="Parking not found")
 
-    layout = read_json(layout_file)
+    assert_same_company_or_super_admin(current_user, parking.company_id)
 
-    layout["camera"] = {
-        "id": camera_id,
-        "parking_id": parking_id,
-        "name": data.name or f"Камера {parking_id}",
-        "source_url": data.source_url,
-        "source_type": data.source_type or "unknown",
-    }
-
-    write_json(layout_file, layout)
-
-    return normalize_camera(parking_id, layout["camera"])
+    return camera, parking
 
 
-@router.put("/{camera_id}")
-def update_camera(camera_id: str, data: CameraUpdate):
-    for parking_dir in get_parking_dirs():
-        layout_file = parking_dir / "layout.json"
-        layout = read_json(layout_file)
-        parking_id = layout.get("parking", {}).get("id", parking_dir.name)
-        camera = normalize_camera(parking_id, layout.get("camera"))
+@router.get("", response_model=list[CameraResponse])
+def list_cameras(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_db)],
+    parking_id: str | None = None,
+):
+    camera_repo = CameraRepository(db)
+    parking_repo = ParkingRepository(db)
 
-        if camera["id"] != camera_id:
-            continue
+    if parking_id:
+        parking = parking_repo.get_by_id_or_slug(parking_id)
+        if not parking:
+            raise HTTPException(status_code=404, detail="Parking not found")
 
-        if data.name is not None:
-            camera["name"] = data.name
+        assert_same_company_or_super_admin(current_user, parking.company_id)
+        return camera_repo.get_by_parking(parking.id)
 
-        if data.source_url is not None:
-            camera["source_url"] = data.source_url
+    if current_user.role == "super_admin":
+        return camera_repo.get_all(limit=1000)
 
-        if data.source_type is not None:
-            camera["source_type"] = data.source_type
+    if current_user.company_id is None:
+        return []
 
-        layout["camera"] = camera
-        write_json(layout_file, layout)
+    parkings = parking_repo.list_for_company(current_user.company_id, limit=1000)
+    parking_ids = [parking.id for parking in parkings]
 
-        return camera
+    result = []
+    for pid in parking_ids:
+        result.extend(camera_repo.get_by_parking(pid))
 
-    raise HTTPException(status_code=404, detail="Camera not found")
+    return result
 
 
-@router.delete("/{camera_id}", status_code=204)
-def delete_camera(camera_id: str):
-    for parking_dir in get_parking_dirs():
-        layout_file = parking_dir / "layout.json"
-        layout = read_json(layout_file)
-        parking_id = layout.get("parking", {}).get("id", parking_dir.name)
-        camera = normalize_camera(parking_id, layout.get("camera"))
+@router.get("/{camera_id}", response_model=CameraResponse)
+def get_camera(
+    camera_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    camera, _parking = resolve_camera(camera_id, db, current_user)
+    return camera
 
-        if camera["id"] != camera_id:
-            continue
 
-        layout["camera"] = {}
-        write_json(layout_file, layout)
-        return
+@router.post("", response_model=CameraResponse, status_code=status.HTTP_201_CREATED)
+def create_camera(
+    data: CameraCreate,
+    current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    camera_repo = CameraRepository(db)
+    parking_repo = ParkingRepository(db)
 
-    raise HTTPException(status_code=404, detail="Camera not found")
+    parking = parking_repo.get_by_id_or_slug(data.parking_id)
+
+    if not parking:
+        raise HTTPException(status_code=404, detail="Parking not found")
+
+    assert_same_company_or_super_admin(current_user, parking.company_id)
+
+    if data.source_type not in {
+        CameraSourceType.RTSP.value,
+        CameraSourceType.VIDEO.value,
+        CameraSourceType.IMAGE.value,
+    }:
+        raise HTTPException(status_code=400, detail="Invalid source_type")
+
+    return camera_repo.create(
+        parking_id=parking.id,
+        name=data.name,
+        source_type=data.source_type,
+        source_url=data.source_url,
+        status=CameraStatus.OFFLINE.value,
+        is_active=True,
+    )
+
+
+@router.put("/{camera_id}", response_model=CameraResponse)
+def update_camera(
+    camera_id: int,
+    data: CameraUpdate,
+    current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    camera_repo = CameraRepository(db)
+    camera, _parking = resolve_camera(camera_id, db, current_user)
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    if "source_type" in update_data and update_data["source_type"] not in {
+        CameraSourceType.RTSP.value,
+        CameraSourceType.VIDEO.value,
+        CameraSourceType.IMAGE.value,
+    }:
+        raise HTTPException(status_code=400, detail="Invalid source_type")
+
+    return camera_repo.update(camera.id, **update_data)
+
+
+@router.delete("/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_camera(
+    camera_id: int,
+    current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    camera_repo = CameraRepository(db)
+    camera, _parking = resolve_camera(camera_id, db, current_user)
+    camera_repo.delete(camera.id)
 
 
 @router.post("/{camera_id}/reconnect")
-def reconnect_camera(camera_id: str):
-    camera = get_camera(camera_id)
+def reconnect_camera(
+    camera_id: int,
+    current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    camera, _parking = resolve_camera(camera_id, db, current_user)
 
     return {
-        "camera_id": camera_id,
+        "camera_id": camera.id,
         "status": "ok",
         "message": "Команда переподключения принята",
-        "camera": camera,
+        "camera": CameraResponse.model_validate(camera),
     }
 
 
 @router.get("/{camera_id}/stream")
-def get_camera_stream(camera_id: str):
-    camera = get_camera(camera_id)
+def get_camera_stream(
+    camera_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    camera, _parking = resolve_camera(camera_id, db, current_user)
 
     raise HTTPException(
         status_code=501,
         detail={
-            "message": "Поток камеры пока не проксируется через backend",
-            "camera": camera,
+            "message": "Проксирование видеопотока пока не реализовано",
+            "camera_id": camera.id,
+            "source_type": camera.source_type,
         },
     )
 
 
 @router.get("/{camera_id}/snapshot")
-def get_camera_snapshot(camera_id: str):
-    camera = get_camera(camera_id)
+def get_camera_snapshot(
+    camera_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    camera, _parking = resolve_camera(camera_id, db, current_user)
 
     raise HTTPException(
         status_code=501,
         detail={
-            "message": "Snapshot камеры пока не проксируется через backend",
-            "camera": camera,
+            "message": "Snapshot через camera endpoint пока не реализован. Используй /parkings/{parking_id}/snapshot",
+            "camera_id": camera.id,
         },
     )

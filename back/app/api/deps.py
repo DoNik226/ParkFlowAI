@@ -47,8 +47,10 @@ def get_current_user(
     try:
         payload = decode_access_token(token)
         user_id = payload.get("sub")
+
         if user_id is None:
             raise credentials_exception
+
         user = user_repository.get_by_id(int(user_id))
     except ValueError:
         raise credentials_exception
@@ -67,15 +69,46 @@ def get_current_active_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive",
         )
+
     return current_user
 
 
 def require_admin(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> User:
-    if current_user.role != UserRole.ADMIN.value:
+    if current_user.role not in {UserRole.ADMIN.value, UserRole.SUPER_ADMIN.value}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(AuthorizationError("Admin role required")),
         )
+
     return current_user
+
+
+def require_super_admin(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> User:
+    if current_user.role != UserRole.SUPER_ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(AuthorizationError("Super admin role required")),
+        )
+
+    return current_user
+
+
+def assert_same_company_or_super_admin(current_user: User, company_id: int | None) -> None:
+    if current_user.role == UserRole.SUPER_ADMIN.value:
+        return
+
+    if current_user.company_id is None or company_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Company access denied",
+        )
+
+    if int(current_user.company_id) != int(company_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Company access denied",
+        )

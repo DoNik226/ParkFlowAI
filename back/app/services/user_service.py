@@ -23,28 +23,32 @@ class UserService:
     def create_user(self, data: UserCreate):
         self._validate_role(data.role)
         self._ensure_unique_fields(data.username, data.email)
+
         return self.user_repo.create(
             username=data.username,
             email=data.email,
             password_hash=hash_password(data.password),
             full_name=data.full_name,
             role=data.role,
+            company_id=data.company_id,
             is_active=data.is_active,
         )
 
     def update_user(self, user_id: int, data: UserUpdate):
         user = self.get_user(user_id)
+
         self._validate_role(data.role)
         self._ensure_unique_fields(data.username, data.email, exclude_user_id=user_id)
-        updated_user = self.user_repo.update(
+
+        return self.user_repo.update(
             user.id,
             username=data.username,
             email=data.email,
             full_name=data.full_name,
             role=data.role,
+            company_id=data.company_id,
             is_active=data.is_active,
         )
-        return updated_user
 
     def update_password(self, user_id: int, new_password: str):
         user = self.get_user(user_id)
@@ -52,6 +56,7 @@ class UserService:
 
     def set_block_status(self, user_id: int, data: UserBlockUpdate):
         user = self.get_user(user_id)
+
         if data.block:
             locked_until = datetime.now(timezone.utc) + timedelta(minutes=data.duration_minutes)
             return self.user_repo.update(
@@ -59,6 +64,7 @@ class UserService:
                 failed_attempts=5,
                 locked_until=locked_until,
             )
+
         return self.user_repo.update(
             user.id,
             failed_attempts=0,
@@ -77,10 +83,16 @@ class UserService:
     ) -> None:
         if self.user_repo.username_exists(username, exclude_user_id=exclude_user_id):
             raise UserAlreadyExistsError("Username already exists")
+
         if self.user_repo.email_exists(email, exclude_user_id=exclude_user_id):
             raise UserAlreadyExistsError("Email already exists")
 
     def _validate_role(self, role: str) -> None:
-        allowed_roles = {UserRole.USER.value, UserRole.ADMIN.value}
+        allowed_roles = {
+            UserRole.USER.value,
+            UserRole.ADMIN.value,
+            UserRole.SUPER_ADMIN.value,
+        }
+
         if role not in allowed_roles:
             raise ValueError(f"Unsupported role: {role}")
