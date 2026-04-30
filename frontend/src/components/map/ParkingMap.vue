@@ -8,7 +8,9 @@
     @mouseup="stopPan"
     @mouseleave="stopPan"
   >
-    <div v-if="!layout" class="empty">Карта не загружена</div>
+    <div v-if="!layout" class="empty">
+      Карта не загружена
+    </div>
 
     <template v-else>
       <div class="map-tools">
@@ -23,23 +25,78 @@
         preserveAspectRatio="xMidYMid meet"
       >
         <g :transform="transform">
-          <g v-for="spot in layout.spots" :key="spot.id">
-            <polygon
-              :points="polygonPoints(spot.polygon)"
-              :class="['spot', getStatus(spot.id)]"
-              @mousedown.stop
-              @click.stop="$emit('select-spot', spot)"
+          <g class="edges-layer">
+            <line
+              v-for="edge in normalizedEdges"
+              :key="edge.id"
+              :x1="edge.source.x"
+              :y1="edge.source.y"
+              :x2="edge.destination.x"
+              :y2="edge.destination.y"
+              class="graph-edge"
             />
+          </g>
 
-            <text
-              :x="center(spot).x"
-              :y="center(spot).y"
-              text-anchor="middle"
-              dominant-baseline="middle"
-              class="spot-label"
+          <polyline
+            v-if="routePoints.length >= 2"
+            :points="routePolyline"
+            class="route-line"
+          />
+
+          <g class="spots-layer">
+            <g v-for="spot in layout.spots || []" :key="spot.id">
+              <polygon
+                :points="polygonPoints(spot.polygon)"
+                :class="[
+                  'spot',
+                  getStatus(spot.id),
+                  { selected: selectedSpotId === spot.id }
+                ]"
+                @mousedown.stop
+                @click.stop="$emit('select-spot', spot)"
+              />
+
+              <text
+                :x="center(spot).x"
+                :y="center(spot).y"
+                text-anchor="middle"
+                dominant-baseline="middle"
+                class="spot-label"
+              >
+                {{ label(spot) }}
+              </text>
+            </g>
+          </g>
+
+          <g class="vertices-layer">
+            <g
+              v-for="vertex in vertices"
+              :key="vertex.id"
+              :class="[
+                'vertex-group',
+                vertex.type,
+                {
+                  route: routeVertexIds.includes(vertex.id),
+                  selectedEntrance: selectedEntranceId === vertex.id
+                }
+              ]"
             >
-              {{ label(spot) }}
-            </text>
+              <circle
+                :cx="vertex.x"
+                :cy="vertex.y"
+                :r="vertexRadius(vertex)"
+                class="vertex"
+              />
+
+              <text
+                :x="vertex.x"
+                :y="vertex.y - vertexRadius(vertex) - 6"
+                text-anchor="middle"
+                class="vertex-label"
+              >
+                {{ vertexLabel(vertex) }}
+              </text>
+            </g>
           </g>
         </g>
       </svg>
@@ -61,6 +118,22 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  mapData: {
+    type: Object,
+    default: null,
+  },
+  routePath: {
+    type: Array,
+    default: () => [],
+  },
+  selectedSpotId: {
+    type: String,
+    default: null,
+  },
+  selectedEntranceId: {
+    type: String,
+    default: null,
+  },
 })
 
 const containerRef = ref(null)
@@ -75,6 +148,41 @@ const lastMouse = ref({ x: 0, y: 0 })
 const MIN_SCALE = 0.6
 const MAX_SCALE = 5
 const SCALE_STEP = 0.18
+
+const vertices = computed(() => {
+  return Array.isArray(props.mapData?.vertices) ? props.mapData.vertices : []
+})
+
+const vertexById = computed(() => {
+  const map = new Map()
+
+  vertices.value.forEach((vertex) => {
+    map.set(vertex.id, vertex)
+  })
+
+  return map
+})
+
+const normalizedEdges = computed(() => {
+  const edges = Array.isArray(props.mapData?.edges) ? props.mapData.edges : []
+
+  return edges
+    .map((edge) => {
+      const source = vertexById.value.get(edge.source)
+      const destination = vertexById.value.get(edge.destination)
+
+      if (!source || !destination) {
+        return null
+      }
+
+      return {
+        ...edge,
+        source,
+        destination,
+      }
+    })
+    .filter(Boolean)
+})
 
 const occupancyBySpotId = computed(() => {
   const map = new Map()
@@ -93,11 +201,26 @@ const occupancyBySpotId = computed(() => {
 const viewBox = computed(() => {
   const width = props.layout?.frame_meta?.width || props.layout?.image?.width || 1920
   const height = props.layout?.frame_meta?.height || props.layout?.image?.height || 1080
+
   return `0 0 ${width} ${height}`
 })
 
 const transform = computed(() => {
   return `translate(${offsetX.value} ${offsetY.value}) scale(${scale.value})`
+})
+
+const routePoints = computed(() => {
+  return props.routePath
+    .map((vertexId) => vertexById.value.get(vertexId))
+    .filter(Boolean)
+})
+
+const routeVertexIds = computed(() => {
+  return props.routePath || []
+})
+
+const routePolyline = computed(() => {
+  return routePoints.value.map((point) => `${point.x},${point.y}`).join(' ')
 })
 
 function polygonPoints(polygon) {
@@ -137,6 +260,18 @@ function label(spot) {
   return ''
 }
 
+function vertexRadius(vertex) {
+  if (vertex.type === 'entrance') return 14
+  if (vertex.type === 'spot_access') return 8
+  return 10
+}
+
+function vertexLabel(vertex) {
+  if (vertex.type === 'entrance') return vertex.name || 'Въезд'
+  if (vertex.type === 'spot_access') return vertex.name || vertex.spot_id || ''
+  return ''
+}
+
 function clampScale(value) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value))
 }
@@ -165,6 +300,7 @@ function onWheel(event) {
   }
 
   const svg = event.currentTarget.querySelector('svg')
+
   if (!svg) {
     scale.value = newScale
     return
@@ -202,6 +338,7 @@ function onPan(event) {
   }
 
   const svg = containerRef.value?.querySelector('svg')
+
   if (!svg) {
     return
   }
@@ -235,7 +372,7 @@ function stopPan() {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 520px;
+  min-height: 620px;
   overflow: hidden;
   border-radius: 16px;
   background: #10131a;
@@ -249,7 +386,7 @@ function stopPan() {
 }
 
 .empty {
-  min-height: 520px;
+  min-height: 620px;
   display: grid;
   place-items: center;
   color: #888;
@@ -258,7 +395,7 @@ function stopPan() {
 .map-svg {
   width: 100%;
   height: 100%;
-  min-height: 520px;
+  min-height: 620px;
   display: block;
   background: #10131a;
 }
@@ -287,8 +424,19 @@ function stopPan() {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
-.map-tools button:hover {
-  background: #ffffff;
+.graph-edge {
+  stroke: rgba(255, 255, 255, 0.38);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.route-line {
+  fill: none;
+  stroke: #fbbf24;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8));
 }
 
 .spot {
@@ -317,9 +465,49 @@ function stopPan() {
   stroke: #999;
 }
 
+.spot.selected {
+  stroke: #fbbf24;
+  stroke-width: 6;
+}
+
 .spot-label {
   fill: #fff;
   font-size: 26px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: #111;
+  stroke-width: 4px;
+  pointer-events: none;
+}
+
+.vertex {
+  stroke-width: 3;
+}
+
+.vertex-group.road .vertex {
+  fill: #ef4444;
+}
+
+.vertex-group.entrance .vertex {
+  fill: #22c55e;
+}
+
+.vertex-group.spot_access .vertex {
+  fill: #8b5cf6;
+}
+
+.vertex-group.route .vertex {
+  fill: #fbbf24;
+}
+
+.vertex-group.selectedEntrance .vertex {
+  stroke: #fbbf24;
+  stroke-width: 6;
+}
+
+.vertex-label {
+  fill: #fff;
+  font-size: 18px;
   font-weight: 800;
   paint-order: stroke;
   stroke: #111;

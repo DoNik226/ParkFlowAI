@@ -6,7 +6,15 @@
     "db_id": 1,
     "company_id": 1
   },
-  "camera": {},
+  "camera": {
+    "id": 1,
+    "parking_id": "parking_test",
+    "parking_db_id": 1,
+    "name": "Тестовая камера",
+    "source_type": "video",
+    "source_url": null,
+    "test_video_path": "/app/data/companies/default/parkings/parking_test/source/test_video.mp4"
+  },
   "frame_meta": {
     "width": 1920,
     "height": 1080

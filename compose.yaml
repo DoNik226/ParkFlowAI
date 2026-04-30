@@ -1,4 +1,18 @@
 services:
+
+
+  detector:
+    build:
+      context: .
+      dockerfile: detector/Dockerfile
+    image: parkflowai-detector
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./back:/app/back
+    depends_on:
+      - backend
+    restart: unless-stopped  
   db:
     image: postgres:16-alpine
     environment:

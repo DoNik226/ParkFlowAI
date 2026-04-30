@@ -343,28 +343,55 @@ def save_layout(
     parking = resolve_parking(parking_id, db, current_user)
 
     layout = data.layout
+
     layout.setdefault("parking", {})
     layout["parking"]["id"] = parking.slug
     layout["parking"]["db_id"] = parking.id
     layout["parking"]["name"] = parking.name
     layout["parking"]["company_id"] = parking.company_id
 
+    camera_repo = CameraRepository(db)
+    camera = camera_repo.get_first_by_parking(parking.id)
+
+    if camera:
+        layout["camera"] = {
+            "id": camera.id,
+            "parking_id": parking.slug,
+            "parking_db_id": parking.id,
+            "name": camera.name,
+            "source_type": camera.source_type,
+            "source_url": camera.source_url,
+            "test_video_path": camera.test_video_path,
+        }
+    else:
+        layout["camera"] = {
+            "id": None,
+            "parking_id": parking.slug,
+            "parking_db_id": parking.id,
+            "name": None,
+            "source_type": None,
+            "source_url": None,
+            "test_video_path": None,
+        }
+
     write_json(parking.layout_file_path, layout)
+
+    spots = layout.get("spots", [])
 
     occupancy = {
         "parking_id": parking.slug,
         "parking_db_id": parking.id,
         "parking_name": parking.name,
         "summary": {
-            "total": len(layout.get("spots", [])),
+            "total": len(spots),
             "occupied": 0,
-            "free": len(layout.get("spots", [])),
+            "free": len(spots),
             "unknown": 0,
         },
         "spots": [
             {
                 "spot_id": spot.get("id"),
-                "status": "unknown",
+                "status": "free",
                 "enabled": spot.get("enabled", True),
                 "row": spot.get("row"),
                 "col": spot.get("col"),
@@ -373,7 +400,7 @@ def save_layout(
                 "confidence": None,
                 "vehicle": None,
             }
-            for spot in layout.get("spots", [])
+            for spot in spots
         ],
     }
 
