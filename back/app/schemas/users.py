@@ -29,8 +29,13 @@ class UserCreate(UserBase):
     is_active: bool = True
 
 
-class UserUpdate(UserBase):
-    is_active: bool = True
+class UserUpdate(BaseModel):
+    username: str | None = Field(default=None, min_length=3, max_length=50)
+    email: str | None = Field(default=None, max_length=255)
+    full_name: str | None = Field(default=None, max_length=255)
+    role: str | None = None
+    company_id: int | None = None
+    is_active: bool | None = None
 
 
 class UserPasswordUpdate(BaseModel):
