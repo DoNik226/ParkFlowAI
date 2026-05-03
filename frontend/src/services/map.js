@@ -5,19 +5,38 @@ import apiClient from './api-client'
  */
 export const mapService = {
   /**
-   * Построить маршрут от въезда до места
-   * POST /routes
+   * Построить маршрут от въезда до места.
+   *
+   * Новый вызов:
+   *   buildRoute(parkingId, entranceId, spotId)
+   *
+   * Для совместимости оставлен старый вариант buildRoute(entranceId, spotId),
+   * но лучше всегда передавать parkingId, чтобы backend не угадывал парковку.
    */
-  async buildRoute(entranceId, spotId) {
-    const response = await apiClient.post('/routes', {
-      entrance_id: entranceId,
-      spot_id: spotId
-    })
+  async buildRoute(parkingId, entranceId, spotId) {
+    let payload
+
+    if (spotId === undefined) {
+      payload = {
+        entrance_id: parkingId,
+        spot_id: entranceId,
+      }
+    } else {
+      payload = {
+        parking_id: parkingId,
+        entrance_id: entranceId,
+        spot_id: spotId,
+        entrance_vertex_id: entranceId,
+        spot_vertex_id: spotId,
+      }
+    }
+
+    const response = await apiClient.post('/routes', payload)
     return response.data
   },
 
   /**
-   * Найти ближайшую свободную парковку
+   * Найти ближайшее свободное место от выбранного въезда.
    * GET /parkings/{id}/nearest?entrance_id=1
    */
   async getNearestParking(parkingId, entranceId) {
