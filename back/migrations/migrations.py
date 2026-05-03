@@ -168,7 +168,7 @@ class DatabaseMigration:
         except Exception as e:
             print(f"  Ошибка при обновлении ENUM {enum_name}: {e}")
             raise
-    
+
     def create_companies_table(self):
         table_name = "companies"
 
@@ -340,9 +340,11 @@ class DatabaseMigration:
         """
 
         indexes = [
-            ("idx_login_attempts_ip_address", "CREATE INDEX idx_login_attempts_ip_address ON login_attempts(ip_address)"),
+            ("idx_login_attempts_ip_address",
+             "CREATE INDEX idx_login_attempts_ip_address ON login_attempts(ip_address)"),
             ("idx_login_attempts_login", "CREATE INDEX idx_login_attempts_login ON login_attempts(login)"),
-            ("idx_login_attempts_attempted_at", "CREATE INDEX idx_login_attempts_attempted_at ON login_attempts(attempted_at)")
+            ("idx_login_attempts_attempted_at",
+             "CREATE INDEX idx_login_attempts_attempted_at ON login_attempts(attempted_at)")
         ]
 
         try:
@@ -447,7 +449,8 @@ class DatabaseMigration:
         default_company_id = self.ensure_default_company()
 
         columns = [
-            ("company_id", "ALTER TABLE parkings ADD COLUMN company_id BIGINT REFERENCES companies(id) ON DELETE CASCADE"),
+            ("company_id",
+             "ALTER TABLE parkings ADD COLUMN company_id BIGINT REFERENCES companies(id) ON DELETE CASCADE"),
             ("slug", "ALTER TABLE parkings ADD COLUMN slug VARCHAR(100)"),
             ("layout_file_path", "ALTER TABLE parkings ADD COLUMN layout_file_path VARCHAR(500)"),
             ("map_file_path", "ALTER TABLE parkings ADD COLUMN map_file_path VARCHAR(500)"),
@@ -483,13 +486,13 @@ class DatabaseMigration:
             """
         )
 
-        self.cursor.execute(
-            """
-            UPDATE parkings
-            SET layout_file_path = config_file_path
-            WHERE layout_file_path IS NULL AND config_file_path IS NOT NULL
-            """
-        )
+        # self.cursor.execute(
+        # """
+        # UPDATE parkings
+        # SET layout_file_path = config_file_path
+        # WHERE layout_file_path IS NULL AND config_file_path IS NOT NULL
+        # """
+        # )
 
         if not self.index_exists("idx_parkings_company_id"):
             self.cursor.execute("CREATE INDEX idx_parkings_company_id ON parkings(company_id)")
@@ -818,6 +821,186 @@ class DatabaseMigration:
             print(f"✗ Ошибка создания таблицы {table_name}: {e}")
             raise
 
+    def ensure_layout_storage_columns(self):
+        """Дополнительные колонки для хранения layout/occupancy не файлами, а в таблицах.
+
+        Старые JSON-файлы layout/occupancy остаются только runtime-кэшем для detector_supervisor,
+        а источником истины становятся parkings, road_vertices, road_edges, entrances,
+        parking_spots и parking_occupancy_cache.
+        """
+        if self.table_exists("parkings"):
+            columns = [
+                ("layout_meta", "ALTER TABLE parkings ADD COLUMN layout_meta JSONB DEFAULT '{}'::jsonb"),
+                ("layout_zones", "ALTER TABLE parkings ADD COLUMN layout_zones JSONB DEFAULT '[]'::jsonb"),
+                ("layout_calibration", "ALTER TABLE parkings ADD COLUMN layout_calibration JSONB"),
+                ("layout_version", "ALTER TABLE parkings ADD COLUMN layout_version INTEGER NOT NULL DEFAULT 1"),
+            ]
+            for column_name, sql in columns:
+                if self.column_exists("parkings", column_name):
+                    print(f"  Колонка 'parkings.{column_name}' уже существует, пропускаем")
+                    continue
+                self.cursor.execute(sql)
+                print(f"  ✓ Колонка 'parkings.{column_name}' создана")
+
+        if self.table_exists("road_vertices"):
+            columns = [
+                ("client_id", "ALTER TABLE road_vertices ADD COLUMN client_id VARCHAR(100)"),
+                ("x", "ALTER TABLE road_vertices ADD COLUMN x DOUBLE PRECISION"),
+                ("y", "ALTER TABLE road_vertices ADD COLUMN y DOUBLE PRECISION"),
+                ("label", "ALTER TABLE road_vertices ADD COLUMN label VARCHAR(100)"),
+                ("payload", "ALTER TABLE road_vertices ADD COLUMN payload JSONB DEFAULT '{}'::jsonb"),
+            ]
+            for column_name, sql in columns:
+                if self.column_exists("road_vertices", column_name):
+                    print(f"  Колонка 'road_vertices.{column_name}' уже существует, пропускаем")
+                    continue
+                self.cursor.execute(sql)
+                print(f"  ✓ Колонка 'road_vertices.{column_name}' создана")
+
+            if not self.index_exists("uq_road_vertices_parking_client"):
+                self.cursor.execute(
+                    """
+                    CREATE UNIQUE INDEX uq_road_vertices_parking_client
+                    ON road_vertices(parking_id, client_id)
+                    WHERE client_id IS NOT NULL
+                    """
+                )
+                print("  ✓ Индекс 'uq_road_vertices_parking_client' создан")
+
+        if self.table_exists("road_edges"):
+            columns = [
+                ("client_id", "ALTER TABLE road_edges ADD COLUMN client_id VARCHAR(100)"),
+                ("parking_id",
+                 "ALTER TABLE road_edges ADD COLUMN parking_id BIGINT REFERENCES parkings(id) ON DELETE CASCADE"),
+                ("payload", "ALTER TABLE road_edges ADD COLUMN payload JSONB DEFAULT '{}'::jsonb"),
+            ]
+            for column_name, sql in columns:
+                if self.column_exists("road_edges", column_name):
+                    print(f"  Колонка 'road_edges.{column_name}' уже существует, пропускаем")
+                    continue
+                self.cursor.execute(sql)
+                print(f"  ✓ Колонка 'road_edges.{column_name}' создана")
+
+            # Для старых записей пытаемся восстановить parking_id по source-вершине.
+            self.cursor.execute(
+                """
+                UPDATE road_edges e
+                SET parking_id = v.parking_id
+                FROM road_vertices v
+                WHERE e.source = v.id
+                AND e.parking_id IS NULL
+                """
+            )
+            print("  ✓ road_edges.parking_id заполнен для существующих рёбер")
+
+            if not self.index_exists("idx_road_edges_parking_id"):
+                self.cursor.execute("CREATE INDEX idx_road_edges_parking_id ON road_edges(parking_id)")
+                print("  ✓ Индекс 'idx_road_edges_parking_id' создан")
+
+            if not self.index_exists("uq_road_edges_parking_client"):
+                self.cursor.execute(
+                    """
+                    CREATE UNIQUE INDEX uq_road_edges_parking_client
+                    ON road_edges(parking_id, client_id)
+                    WHERE client_id IS NOT NULL
+                    """
+                )
+                print("  ✓ Индекс 'uq_road_edges_parking_client' создан")
+
+        if self.table_exists("parking_spots"):
+            columns = [
+                ("client_id", "ALTER TABLE parking_spots ADD COLUMN client_id VARCHAR(100)"),
+                ("label", "ALTER TABLE parking_spots ADD COLUMN label VARCHAR(100)"),
+                ("row_index", "ALTER TABLE parking_spots ADD COLUMN row_index INTEGER"),
+                ("col_index", "ALTER TABLE parking_spots ADD COLUMN col_index INTEGER"),
+                ("zone", "ALTER TABLE parking_spots ADD COLUMN zone VARCHAR(100)"),
+                ("zone_id", "ALTER TABLE parking_spots ADD COLUMN zone_id VARCHAR(100)"),
+                ("polygon", "ALTER TABLE parking_spots ADD COLUMN polygon JSONB DEFAULT '[]'::jsonb"),
+                ("enabled", "ALTER TABLE parking_spots ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT TRUE"),
+                ("confidence", "ALTER TABLE parking_spots ADD COLUMN confidence DOUBLE PRECISION"),
+                ("vehicle", "ALTER TABLE parking_spots ADD COLUMN vehicle JSONB"),
+                ("last_status_at", "ALTER TABLE parking_spots ADD COLUMN last_status_at TIMESTAMP WITH TIME ZONE"),
+                ("payload", "ALTER TABLE parking_spots ADD COLUMN payload JSONB DEFAULT '{}'::jsonb"),
+            ]
+            for column_name, sql in columns:
+                if self.column_exists("parking_spots", column_name):
+                    print(f"  Колонка 'parking_spots.{column_name}' уже существует, пропускаем")
+                    continue
+                self.cursor.execute(sql)
+                print(f"  ✓ Колонка 'parking_spots.{column_name}' создана")
+
+            self.cursor.execute(
+                """
+                UPDATE parking_spots
+                SET client_id = spot_number
+                WHERE client_id IS NULL
+                """
+            )
+            print("  ✓ parking_spots.client_id заполнен из spot_number")
+
+            if not self.index_exists("uq_parking_spots_parking_client"):
+                self.cursor.execute(
+                    """
+                    CREATE UNIQUE INDEX uq_parking_spots_parking_client
+                    ON parking_spots(parking_id, client_id)
+                    WHERE client_id IS NOT NULL
+                    """
+                )
+                print("  ✓ Индекс 'uq_parking_spots_parking_client' создан")
+
+        if self.table_exists("entrances"):
+            columns = [
+                ("client_id", "ALTER TABLE entrances ADD COLUMN client_id VARCHAR(100)"),
+                ("x", "ALTER TABLE entrances ADD COLUMN x DOUBLE PRECISION"),
+                ("y", "ALTER TABLE entrances ADD COLUMN y DOUBLE PRECISION"),
+                ("payload", "ALTER TABLE entrances ADD COLUMN payload JSONB DEFAULT '{}'::jsonb"),
+            ]
+            for column_name, sql in columns:
+                if self.column_exists("entrances", column_name):
+                    print(f"  Колонка 'entrances.{column_name}' уже существует, пропускаем")
+                    continue
+                self.cursor.execute(sql)
+                print(f"  ✓ Колонка 'entrances.{column_name}' создана")
+
+            if not self.index_exists("uq_entrances_parking_client"):
+                self.cursor.execute(
+                    """
+                    CREATE UNIQUE INDEX uq_entrances_parking_client
+                    ON entrances(parking_id, client_id)
+                    WHERE client_id IS NOT NULL
+                    """
+                )
+                print("  ✓ Индекс 'uq_entrances_parking_client' создан")
+
+        if self.table_exists("parking_occupancy_cache"):
+            columns = [
+                ("occupied_spots",
+                 "ALTER TABLE parking_occupancy_cache ADD COLUMN occupied_spots INTEGER NOT NULL DEFAULT 0 CHECK (occupied_spots >= 0)"),
+                ("unknown_spots",
+                 "ALTER TABLE parking_occupancy_cache ADD COLUMN unknown_spots INTEGER NOT NULL DEFAULT 0 CHECK (unknown_spots >= 0)"),
+                ("frame_index", "ALTER TABLE parking_occupancy_cache ADD COLUMN frame_index INTEGER"),
+                ("timestamp_sec", "ALTER TABLE parking_occupancy_cache ADD COLUMN timestamp_sec DOUBLE PRECISION"),
+                ("params", "ALTER TABLE parking_occupancy_cache ADD COLUMN params JSONB DEFAULT '{}'::jsonb"),
+                ("source_type", "ALTER TABLE parking_occupancy_cache ADD COLUMN source_type VARCHAR(50)"),
+                ("source_path", "ALTER TABLE parking_occupancy_cache ADD COLUMN source_path VARCHAR(500)"),
+                ("camera_id",
+                 "ALTER TABLE parking_occupancy_cache ADD COLUMN camera_id BIGINT REFERENCES cameras(id) ON DELETE SET NULL"),
+            ]
+            for column_name, sql in columns:
+                if self.column_exists("parking_occupancy_cache", column_name):
+                    print(f"  Колонка 'parking_occupancy_cache.{column_name}' уже существует, пропускаем")
+                    continue
+                self.cursor.execute(sql)
+                print(f"  ✓ Колонка 'parking_occupancy_cache.{column_name}' создана")
+
+            self.cursor.execute(
+                """
+                UPDATE parking_occupancy_cache
+                SET occupied_spots = GREATEST(total_spots - free_spots, 0)
+                WHERE occupied_spots = 0
+                """
+            )
+            print("  ✓ occupied_spots рассчитан для существующего cache")
 
     def get_migration_status(self) -> dict:
         """
@@ -874,6 +1057,9 @@ class DatabaseMigration:
             self.create_parking_spots_table()
             self.create_entrances_table()
             self.create_parking_occupancy_cache_table()
+
+            # Дополнительные поля для хранения layout/occupancy в нормализованных таблицах.
+            self.ensure_layout_storage_columns()
 
             if create_admin:
                 self.create_default_admin()
