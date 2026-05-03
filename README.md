@@ -24,5 +24,5 @@ docker compose up --build
 - Password: `123321`
 
 Чтобы запустить полную версию приложения с детектором через docker:
-`docker compose down`
-`docker compose up --build backend frontend detector`
+- `docker compose down`
+- `docker compose up --build backend frontend detector`
