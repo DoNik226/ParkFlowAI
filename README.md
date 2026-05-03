@@ -15,5 +15,14 @@ docker compose up --build
 
 Данные для логина:
 
+Админ:
 - Username: `admin`
 - Password: `adminadminadmin`
+
+Пользователь:
+- Username: `egor`
+- Password: `123321`
+
+Чтобы запустить полную версию приложения с детектором через docker:
+`docker compose down`
+`docker compose up --build backend frontend detector`
