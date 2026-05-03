@@ -16,3 +16,8 @@ class ParkingRepository(BaseRepository[Parking]):
 
     def get_with_stats(self, parking_id: int) -> Optional[Parking]:
         return self.db.query(Parking).filter(Parking.id == parking_id).first()
+
+    def list_by_ids(self, parking_ids: list[int]) -> List[Parking]:
+        if not parking_ids:
+            return []
+        return self.db.query(Parking).filter(Parking.id.in_(parking_ids)).all()

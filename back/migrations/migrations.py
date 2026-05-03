@@ -600,6 +600,53 @@ class DatabaseMigration:
             print(f"✗ Ошибка создания таблицы {table_name}: {e}")
             raise
 
+    def create_event_logs_table(self):
+        """Создание таблицы event_logs с проверкой существования"""
+        table_name = "event_logs"
+
+        if self.table_exists(table_name):
+            print(f"  Таблица '{table_name}' уже существует, пропускаем создание")
+            return
+
+        create_table_sql = """
+        CREATE TABLE event_logs (
+            id BIGSERIAL PRIMARY KEY,
+            timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            event_type VARCHAR(64) NOT NULL,
+            severity VARCHAR(20) NOT NULL DEFAULT 'info',
+            entity_type VARCHAR(20) NOT NULL DEFAULT 'system',
+            entity_id BIGINT,
+            actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+            parking_id BIGINT REFERENCES parkings(id) ON DELETE SET NULL,
+            description TEXT NOT NULL,
+            details JSONB NOT NULL DEFAULT '{}'::jsonb
+        )
+        """
+
+        indexes = [
+            ("idx_event_logs_timestamp", "CREATE INDEX idx_event_logs_timestamp ON event_logs(timestamp DESC)"),
+            ("idx_event_logs_event_type", "CREATE INDEX idx_event_logs_event_type ON event_logs(event_type)"),
+            ("idx_event_logs_entity_type", "CREATE INDEX idx_event_logs_entity_type ON event_logs(entity_type)"),
+            ("idx_event_logs_entity_id", "CREATE INDEX idx_event_logs_entity_id ON event_logs(entity_id)"),
+            ("idx_event_logs_actor_user_id", "CREATE INDEX idx_event_logs_actor_user_id ON event_logs(actor_user_id)"),
+            ("idx_event_logs_parking_id", "CREATE INDEX idx_event_logs_parking_id ON event_logs(parking_id)")
+        ]
+
+        try:
+            self.cursor.execute(create_table_sql)
+            print(f"✓ Таблица '{table_name}' создана")
+            self.migration_history.append(f"created_table_{table_name}")
+
+            for index_name, index_sql in indexes:
+                if not self.index_exists(index_name):
+                    self.cursor.execute(index_sql)
+                    print(f"  ✓ Индекс '{index_name}' создан")
+                else:
+                    print(f"  Индекс '{index_name}' уже существует, пропускаем")
+        except Exception as e:
+            print(f"✗ Ошибка создания таблицы {table_name}: {e}")
+            raise
+
 
     def get_migration_status(self) -> dict:
         """
@@ -610,7 +657,8 @@ class DatabaseMigration:
         """
         tables = [
             'users', 'login_attempts', 'parkings', 'road_vertices', 'road_edges',
-            'cameras', 'parking_spots', 'entrances', 'parking_occupancy_cache'
+            'cameras', 'parking_spots', 'entrances', 'parking_occupancy_cache',
+            'event_logs'
         ]
 
         status = {}
@@ -653,6 +701,7 @@ class DatabaseMigration:
             self.create_parking_spots_table()
             self.create_entrances_table()
             self.create_parking_occupancy_cache_table()
+            self.create_event_logs_table()
 
             if create_admin:
                 self.create_default_admin()

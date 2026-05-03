@@ -3,8 +3,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from back.app.api.deps import get_auth_service, get_current_active_user
+from back.app.api.deps import get_audit_logger, get_auth_service, get_current_active_user
 from back.app.core.exceptions import AccountLockedError, AuthenticationError
+from back.app.logger import AuditLogger
+from back.app.models.enums import EventEntityType, UserRole
 from back.app.models.user import User
 from back.app.schemas.auth import LoginRequest, TokenResponse
 from back.app.schemas.users import AuthUser
@@ -16,15 +18,27 @@ router = APIRouter(
 )
 
 
+def _user_entity_type(role: str) -> str:
+    if role == UserRole.ADMIN.value:
+        return EventEntityType.ADMIN.value
+    return EventEntityType.USER.value
+
+
 @router.post("/login", response_model=TokenResponse)
 async def login(
     data: LoginRequest,
     request: Request,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     client_ip = request.client.host if request.client else None
     try:
-        return await auth_service.login(data.login, data.password, client_ip=client_ip)
+        token_payload = await auth_service.login(data.login, data.password, client_ip=client_ip)
+        audit_logger.log_user_login(
+            token_payload["user_id"],
+            entity_type=_user_entity_type(token_payload["role"]),
+        )
+        return token_payload
     except AccountLockedError as exc:
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
@@ -45,14 +59,20 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     request: Request,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     client_ip = request.client.host if request.client else None
     try:
-        return await auth_service.login(
+        token_payload = await auth_service.login(
             form_data.username,
             form_data.password,
             client_ip=client_ip,
         )
+        audit_logger.log_user_login(
+            token_payload["user_id"],
+            entity_type=_user_entity_type(token_payload["role"]),
+        )
+        return token_payload
     except AccountLockedError as exc:
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
@@ -71,7 +91,14 @@ async def login_for_access_token(
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout() -> Response:
+async def logout(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
+) -> Response:
+    audit_logger.log_user_logout(
+        current_user.id,
+        entity_type=_user_entity_type(current_user.role),
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
