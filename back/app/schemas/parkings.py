@@ -20,6 +20,23 @@ class ParkingUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class CameraInParkingResponse(BaseModel):
+    id: int | None = None
+    parking_id: int | None = None
+    name: str | None = None
+
+    source_type: str | None = None
+    source_url: str | None = None
+    test_video_path: str | None = None
+
+    status: str | None = None
+    is_active: bool | None = None
+    last_snapshot_path: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
 class ParkingResponse(BaseModel):
     id: str
     db_id: int
@@ -38,6 +55,18 @@ class ParkingResponse(BaseModel):
     spots_count: int = 0
     zones_count: int = 0
     summary: dict = {}
+
+    # Данные камеры/источника для страницы списка парковок
+    camera: CameraInParkingResponse | None = None
+    cameras: list[CameraInParkingResponse] = []
+
+    # Дублирующие поля первого источника, чтобы frontend мог проще читать статус
+    camera_id: int | None = None
+    camera_name: str | None = None
+    source_type: str | None = None
+    source_url: str | None = None
+    test_video_path: str | None = None
+    camera_status: str | None = None
 
     class Config:
         from_attributes = True

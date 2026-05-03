@@ -28,13 +28,33 @@ def read_json(path: Path, default: Any = None):
         return json.load(file)
 
 
+def make_json_serializable(value: Any) -> Any:
+    if isinstance(value, Path):
+        return str(value)
+
+    if isinstance(value, dict):
+        return {
+            key: make_json_serializable(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            make_json_serializable(item)
+            for item in value
+        ]
+
+    return value
+
+
 def write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
     temp_path = path.with_suffix(path.suffix + ".tmp")
+    serializable_data = make_json_serializable(data)
 
     with temp_path.open("w", encoding="utf-8") as file:
-        json.dump(data, file, ensure_ascii=False, indent=2)
+        json.dump(serializable_data, file, ensure_ascii=False, indent=2)
 
     temp_path.replace(path)
 
@@ -85,8 +105,8 @@ def detector_control_path(db: Session, parking) -> Path:
 def ensure_detector_runtime_files(db: Session, parking) -> None:
     """Перед стартом детектора собирает layout/occupancy JSON из БД.
 
-    Старый detector_supervisor читает layout_path и пишет save_json, поэтому файлы
-    остаются runtime-кэшем, но фронт и сохранение работают через БД.
+    detector_supervisor читает layout_path и пишет save_json, поэтому файлы
+    остаются runtime-кэшем, но фронт и сохранение могут работать через БД.
     """
     if not parking.layout_file_path:
         raise HTTPException(status_code=400, detail="Layout path is empty")
@@ -96,8 +116,8 @@ def ensure_detector_runtime_files(db: Session, parking) -> None:
 
     ParkingLayoutStorageService(db).write_runtime_json_files(
         parking=parking,
-        layout_path=parking.layout_file_path,
-        occupancy_path=parking.occupancy_file_path,
+        layout_path=str(parking.layout_file_path),
+        occupancy_path=str(parking.occupancy_file_path),
     )
 
 
@@ -125,11 +145,11 @@ def build_detector_config(db: Session, parking, active: bool) -> dict:
         "company_id": parking.company_id,
         "active": active,
         "source_type": source_type,
-        "source": source,
-        "layout_path": parking.layout_file_path,
-        "save_json": parking.occupancy_file_path,
-        "save_frame": parking.debug_frame_path,
-        "model": DEFAULT_MODEL_PATH,
+        "source": str(source),
+        "layout_path": str(parking.layout_file_path),
+        "save_json": str(parking.occupancy_file_path),
+        "save_frame": str(parking.debug_frame_path) if parking.debug_frame_path else None,
+        "model": str(DEFAULT_MODEL_PATH),
         "interval_sec": 1.0,
         "loop_video": source_type == CameraSourceType.VIDEO.value,
         "is_live": source_type == CameraSourceType.RTSP.value,
@@ -148,7 +168,7 @@ def get_detector_status(
     camera = get_camera_or_404(db, parking.id)
 
     control_file = detector_control_path(db, parking)
-    control = read_json(control_file, default={})
+    control = read_json(control_file, default={}) or {}
 
     # Для RTSP включаем детекцию автоматически, если конфиг ещё не создан.
     if camera.source_type == CameraSourceType.RTSP.value and not control:
@@ -194,7 +214,7 @@ def stop_detector(
     parking = resolve_parking(parking_id, db, current_user)
     control_file = detector_control_path(db, parking)
 
-    control = read_json(control_file, default={})
+    control = read_json(control_file, default={}) or {}
     control["active"] = False
 
     write_json(control_file, control)
