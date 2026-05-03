@@ -108,79 +108,79 @@ class UserService:
         self.user_repo.delete(user.id)
 
     def _resolve_company_id_for_new_user(
-        self,
-        current_user: User,
-        requested_company_id: int | None,
-    ) -> int:
-        if current_user.role == UserRole.SUPER_ADMIN.value:
-            if requested_company_id is None:
-                raise ValueError("company_id is required")
+                self,
+                current_user: User,
+                requested_company_id: int | None,
+        ) -> int:
+            if current_user.role == UserRole.SUPER_ADMIN.value:
+                if requested_company_id is None:
+                    raise ValueError("company_id is required")
 
-            return requested_company_id
+                return requested_company_id
 
-        if current_user.role == UserRole.ADMIN.value:
-            if current_user.company_id is None:
-                raise ValueError("Current admin is not assigned to company")
+            if current_user.role == UserRole.ADMIN.value:
+                if current_user.company_id is None:
+                    raise ValueError("Current admin is not assigned to company")
 
-            return current_user.company_id
+                return current_user.company_id
 
-        raise ValueError("Only admin can create users")
+            raise ValueError("Only admin can create users")
 
     def _ensure_user_access(self, current_user: User, target_user: User) -> None:
-        if current_user.role == UserRole.SUPER_ADMIN.value:
-            return
+            if current_user.role == UserRole.SUPER_ADMIN.value:
+                return
 
-        if current_user.company_id is None:
-            raise UserNotFoundError("User not found")
+            if current_user.company_id is None:
+                raise UserNotFoundError("User not found")
 
-        if target_user.company_id != current_user.company_id:
-            raise UserNotFoundError("User not found")
+            if target_user.company_id != current_user.company_id:
+                raise UserNotFoundError("User not found")
 
     def _ensure_unique_fields(
-        self,
-        username: str,
-        email: str,
-        exclude_user_id: int | None = None,
-    ) -> None:
-        self._ensure_unique_username(username, exclude_user_id=exclude_user_id)
-        self._ensure_unique_email(email, exclude_user_id=exclude_user_id)
+                self,
+                username: str,
+                email: str,
+                exclude_user_id: int | None = None,
+        ) -> None:
+            self._ensure_unique_username(username, exclude_user_id=exclude_user_id)
+            self._ensure_unique_email(email, exclude_user_id=exclude_user_id)
 
     def _ensure_unique_username(
-        self,
-        username: str,
-        exclude_user_id: int | None = None,
-    ) -> None:
-        if self.user_repo.username_exists(username, exclude_user_id=exclude_user_id):
-            raise UserAlreadyExistsError("Username already exists")
+                self,
+                username: str,
+                exclude_user_id: int | None = None,
+        ) -> None:
+            if self.user_repo.username_exists(username, exclude_user_id=exclude_user_id):
+                raise UserAlreadyExistsError("Username already exists")
 
     def _ensure_unique_email(
-        self,
-        email: str,
-        exclude_user_id: int | None = None,
-    ) -> None:
-        if self.user_repo.email_exists(email, exclude_user_id=exclude_user_id):
-            raise UserAlreadyExistsError("Email already exists")
+                self,
+                email: str,
+                exclude_user_id: int | None = None,
+        ) -> None:
+            if self.user_repo.email_exists(email, exclude_user_id=exclude_user_id):
+                raise UserAlreadyExistsError("Email already exists")
 
     def _validate_role_for_create(self, role: str, current_user: User) -> None:
-        allowed_roles = {
-            UserRole.USER.value,
-            UserRole.ADMIN.value,
-        }
+            allowed_roles = {
+                UserRole.USER.value,
+                UserRole.ADMIN.value,
+            }
 
-        if current_user.role == UserRole.SUPER_ADMIN.value:
-            allowed_roles.add(UserRole.SUPER_ADMIN.value)
+            if current_user.role == UserRole.SUPER_ADMIN.value:
+                allowed_roles.add(UserRole.SUPER_ADMIN.value)
 
-        if role not in allowed_roles:
-            raise ValueError(f"Unsupported role: {role}")
+            if role not in allowed_roles:
+                raise ValueError(f"Unsupported role: {role}")
 
     def _validate_role_for_update(self, role: str, current_user: User) -> None:
-        allowed_roles = {
-            UserRole.USER.value,
-            UserRole.ADMIN.value,
-        }
+            allowed_roles = {
+                UserRole.USER.value,
+                UserRole.ADMIN.value,
+            }
 
-        if current_user.role == UserRole.SUPER_ADMIN.value:
-            allowed_roles.add(UserRole.SUPER_ADMIN.value)
+            if current_user.role == UserRole.SUPER_ADMIN.value:
+                allowed_roles.add(UserRole.SUPER_ADMIN.value)
 
-        if role not in allowed_roles:
-            raise ValueError(f"Unsupported role: {role}")
+            if role not in allowed_roles:
+                raise ValueError(f"Unsupported role: {role}")
