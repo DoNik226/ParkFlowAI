@@ -12,11 +12,12 @@ from back.app.models.user import User
 from back.app.repositories.camera_repository import CameraRepository
 from back.app.repositories.company_repository import CompanyRepository
 from back.app.repositories.parking_repository import ParkingRepository
+from back.app.services.parking_layout_storage_service import ParkingLayoutStorageService
 
 router = APIRouter(prefix="/parkings/{parking_id}/detector", tags=["detector"])
 
 DATA_ROOT = Path("/app/data/companies")
-DEFAULT_MODEL_PATH = "/app/models/best.pt"
+DEFAULT_MODEL_PATH = Path("/app/models/best.pt")
 
 
 def read_json(path: Path, default: Any = None):
@@ -81,6 +82,25 @@ def detector_control_path(db: Session, parking) -> Path:
     return parking_storage_dir(db, parking) / "detector_control.json"
 
 
+def ensure_detector_runtime_files(db: Session, parking) -> None:
+    """Перед стартом детектора собирает layout/occupancy JSON из БД.
+
+    Старый detector_supervisor читает layout_path и пишет save_json, поэтому файлы
+    остаются runtime-кэшем, но фронт и сохранение работают через БД.
+    """
+    if not parking.layout_file_path:
+        raise HTTPException(status_code=400, detail="Layout path is empty")
+
+    if not parking.occupancy_file_path:
+        raise HTTPException(status_code=400, detail="Occupancy path is empty")
+
+    ParkingLayoutStorageService(db).write_runtime_json_files(
+        parking=parking,
+        layout_path=parking.layout_file_path,
+        occupancy_path=parking.occupancy_file_path,
+    )
+
+
 def build_detector_config(db: Session, parking, active: bool) -> dict:
     camera = get_camera_or_404(db, parking.id)
 
@@ -97,11 +117,7 @@ def build_detector_config(db: Session, parking, active: bool) -> dict:
             detail="Camera source is empty. Upload video or set RTSP URL first.",
         )
 
-    if not parking.layout_file_path:
-        raise HTTPException(status_code=400, detail="Layout path is empty")
-
-    if not parking.occupancy_file_path:
-        raise HTTPException(status_code=400, detail="Occupancy path is empty")
+    ensure_detector_runtime_files(db, parking)
 
     return {
         "parking_id": parking.slug,
