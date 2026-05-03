@@ -31,3 +31,7 @@ python-dotenv==1.0.0
 httpx==0.25.1
 python-decouple==3.8
 
+# Это вот все для детекции
+numpy
+opencv-python-headless
+ultralytics

@@ -1,0 +1,1264 @@
+{
+  "parking": {
+    "id": "parking_a",
+    "name": "Парковка A"
+  },
+  "camera": {
+    "id": "cam_a",
+    "source_type": "video",
+    "source_path": ""
+  },
+  "frame_meta": {
+    "width": 1920,
+    "height": 1080,
+    "frame_index": 0
+  },
+  "calibration": {
+    "pixels_per_meter": 30.9
+  },
+  "zones": [
+    {
+      "id": "parking_a_zone_01",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "cols": 13,
+      "rows": 1,
+      "corners": [
+        {
+          "x": 110,
+          "y": 270
+        },
+        {
+          "x": 1624,
+          "y": 268
+        },
+        {
+          "x": 1624,
+          "y": 6
+        },
+        {
+          "x": 121,
+          "y": 3
+        }
+      ],
+      "spots": [
+        "parking_a_001",
+        "parking_a_002",
+        "parking_a_003",
+        "parking_a_004",
+        "parking_a_005",
+        "parking_a_006",
+        "parking_a_007",
+        "parking_a_008",
+        "parking_a_009",
+        "parking_a_010",
+        "parking_a_011",
+        "parking_a_012",
+        "parking_a_013"
+      ]
+    },
+    {
+      "id": "parking_a_zone_02",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "cols": 10,
+      "rows": 2,
+      "corners": [
+        {
+          "x": 10,
+          "y": 592
+        },
+        {
+          "x": 1197,
+          "y": 588
+        },
+        {
+          "x": 1193,
+          "y": 1082
+        },
+        {
+          "x": 3,
+          "y": 1080
+        }
+      ],
+      "spots": [
+        "parking_a_014",
+        "parking_a_015",
+        "parking_a_016",
+        "parking_a_017",
+        "parking_a_018",
+        "parking_a_019",
+        "parking_a_020",
+        "parking_a_021",
+        "parking_a_022",
+        "parking_a_023",
+        "parking_a_024",
+        "parking_a_025",
+        "parking_a_026",
+        "parking_a_027",
+        "parking_a_028",
+        "parking_a_029",
+        "parking_a_030",
+        "parking_a_031",
+        "parking_a_032",
+        "parking_a_033"
+      ]
+    },
+    {
+      "id": "parking_a_zone_03",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "cols": 7,
+      "rows": 1,
+      "corners": [
+        {
+          "x": 1633,
+          "y": 1033
+        },
+        {
+          "x": 1626,
+          "y": 270
+        },
+        {
+          "x": 1883,
+          "y": 261
+        },
+        {
+          "x": 1911,
+          "y": 1030
+        }
+      ],
+      "spots": [
+        "parking_a_034",
+        "parking_a_035",
+        "parking_a_036",
+        "parking_a_037",
+        "parking_a_038",
+        "parking_a_039",
+        "parking_a_040"
+      ]
+    }
+  ],
+  "spots": [
+    {
+      "id": "parking_a_001",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 1,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 110,
+          "y": 270
+        },
+        {
+          "x": 229,
+          "y": 270
+        },
+        {
+          "x": 238,
+          "y": 3
+        },
+        {
+          "x": 121,
+          "y": 3
+        }
+      ]
+    },
+    {
+      "id": "parking_a_002",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 2,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 229,
+          "y": 270
+        },
+        {
+          "x": 347,
+          "y": 270
+        },
+        {
+          "x": 356,
+          "y": 3
+        },
+        {
+          "x": 238,
+          "y": 3
+        }
+      ]
+    },
+    {
+      "id": "parking_a_003",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 3,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 347,
+          "y": 270
+        },
+        {
+          "x": 464,
+          "y": 269
+        },
+        {
+          "x": 472,
+          "y": 3
+        },
+        {
+          "x": 356,
+          "y": 3
+        }
+      ]
+    },
+    {
+      "id": "parking_a_004",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 4,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 464,
+          "y": 269
+        },
+        {
+          "x": 582,
+          "y": 269
+        },
+        {
+          "x": 589,
+          "y": 3
+        },
+        {
+          "x": 472,
+          "y": 3
+        }
+      ]
+    },
+    {
+      "id": "parking_a_005",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 5,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 582,
+          "y": 269
+        },
+        {
+          "x": 699,
+          "y": 269
+        },
+        {
+          "x": 705,
+          "y": 4
+        },
+        {
+          "x": 589,
+          "y": 3
+        }
+      ]
+    },
+    {
+      "id": "parking_a_006",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 6,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 699,
+          "y": 269
+        },
+        {
+          "x": 816,
+          "y": 269
+        },
+        {
+          "x": 821,
+          "y": 4
+        },
+        {
+          "x": 705,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "id": "parking_a_007",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 7,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 816,
+          "y": 269
+        },
+        {
+          "x": 932,
+          "y": 269
+        },
+        {
+          "x": 937,
+          "y": 4
+        },
+        {
+          "x": 821,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "id": "parking_a_008",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 8,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 932,
+          "y": 269
+        },
+        {
+          "x": 1048,
+          "y": 269
+        },
+        {
+          "x": 1052,
+          "y": 4
+        },
+        {
+          "x": 937,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "id": "parking_a_009",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 9,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1048,
+          "y": 269
+        },
+        {
+          "x": 1164,
+          "y": 269
+        },
+        {
+          "x": 1167,
+          "y": 5
+        },
+        {
+          "x": 1052,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "id": "parking_a_010",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 10,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1164,
+          "y": 269
+        },
+        {
+          "x": 1280,
+          "y": 269
+        },
+        {
+          "x": 1282,
+          "y": 5
+        },
+        {
+          "x": 1167,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "id": "parking_a_011",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 11,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1280,
+          "y": 269
+        },
+        {
+          "x": 1395,
+          "y": 269
+        },
+        {
+          "x": 1396,
+          "y": 5
+        },
+        {
+          "x": 1282,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "id": "parking_a_012",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 12,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1395,
+          "y": 269
+        },
+        {
+          "x": 1510,
+          "y": 268
+        },
+        {
+          "x": 1511,
+          "y": 5
+        },
+        {
+          "x": 1396,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "id": "parking_a_013",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_01",
+      "zone": 1,
+      "col": 13,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1510,
+          "y": 268
+        },
+        {
+          "x": 1624,
+          "y": 268
+        },
+        {
+          "x": 1624,
+          "y": 6
+        },
+        {
+          "x": 1511,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "id": "parking_a_014",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 1,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 10,
+          "y": 592
+        },
+        {
+          "x": 128,
+          "y": 592
+        },
+        {
+          "x": 124,
+          "y": 836
+        },
+        {
+          "x": 7,
+          "y": 836
+        }
+      ]
+    },
+    {
+      "id": "parking_a_015",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 2,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 128,
+          "y": 592
+        },
+        {
+          "x": 246,
+          "y": 591
+        },
+        {
+          "x": 242,
+          "y": 836
+        },
+        {
+          "x": 124,
+          "y": 836
+        }
+      ]
+    },
+    {
+      "id": "parking_a_016",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 3,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 246,
+          "y": 591
+        },
+        {
+          "x": 364,
+          "y": 591
+        },
+        {
+          "x": 360,
+          "y": 836
+        },
+        {
+          "x": 242,
+          "y": 836
+        }
+      ]
+    },
+    {
+      "id": "parking_a_017",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 4,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 364,
+          "y": 591
+        },
+        {
+          "x": 482,
+          "y": 590
+        },
+        {
+          "x": 479,
+          "y": 835
+        },
+        {
+          "x": 360,
+          "y": 836
+        }
+      ]
+    },
+    {
+      "id": "parking_a_018",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 5,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 482,
+          "y": 590
+        },
+        {
+          "x": 600,
+          "y": 590
+        },
+        {
+          "x": 597,
+          "y": 835
+        },
+        {
+          "x": 479,
+          "y": 835
+        }
+      ]
+    },
+    {
+      "id": "parking_a_019",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 6,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 600,
+          "y": 590
+        },
+        {
+          "x": 719,
+          "y": 590
+        },
+        {
+          "x": 716,
+          "y": 835
+        },
+        {
+          "x": 597,
+          "y": 835
+        }
+      ]
+    },
+    {
+      "id": "parking_a_020",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 7,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 719,
+          "y": 590
+        },
+        {
+          "x": 838,
+          "y": 589
+        },
+        {
+          "x": 836,
+          "y": 835
+        },
+        {
+          "x": 716,
+          "y": 835
+        }
+      ]
+    },
+    {
+      "id": "parking_a_021",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 8,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 838,
+          "y": 589
+        },
+        {
+          "x": 958,
+          "y": 589
+        },
+        {
+          "x": 955,
+          "y": 835
+        },
+        {
+          "x": 836,
+          "y": 835
+        }
+      ]
+    },
+    {
+      "id": "parking_a_022",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 9,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 958,
+          "y": 589
+        },
+        {
+          "x": 1077,
+          "y": 588
+        },
+        {
+          "x": 1075,
+          "y": 835
+        },
+        {
+          "x": 955,
+          "y": 835
+        }
+      ]
+    },
+    {
+      "id": "parking_a_023",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 10,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1077,
+          "y": 588
+        },
+        {
+          "x": 1197,
+          "y": 588
+        },
+        {
+          "x": 1195,
+          "y": 835
+        },
+        {
+          "x": 1075,
+          "y": 835
+        }
+      ]
+    },
+    {
+      "id": "parking_a_024",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 1,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 7,
+          "y": 836
+        },
+        {
+          "x": 124,
+          "y": 836
+        },
+        {
+          "x": 121,
+          "y": 1081
+        },
+        {
+          "x": 3,
+          "y": 1080
+        }
+      ]
+    },
+    {
+      "id": "parking_a_025",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 2,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 124,
+          "y": 836
+        },
+        {
+          "x": 242,
+          "y": 836
+        },
+        {
+          "x": 239,
+          "y": 1081
+        },
+        {
+          "x": 121,
+          "y": 1081
+        }
+      ]
+    },
+    {
+      "id": "parking_a_026",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 3,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 242,
+          "y": 836
+        },
+        {
+          "x": 360,
+          "y": 836
+        },
+        {
+          "x": 357,
+          "y": 1081
+        },
+        {
+          "x": 239,
+          "y": 1081
+        }
+      ]
+    },
+    {
+      "id": "parking_a_027",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 4,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 360,
+          "y": 836
+        },
+        {
+          "x": 479,
+          "y": 835
+        },
+        {
+          "x": 475,
+          "y": 1081
+        },
+        {
+          "x": 357,
+          "y": 1081
+        }
+      ]
+    },
+    {
+      "id": "parking_a_028",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 5,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 479,
+          "y": 835
+        },
+        {
+          "x": 597,
+          "y": 835
+        },
+        {
+          "x": 594,
+          "y": 1081
+        },
+        {
+          "x": 475,
+          "y": 1081
+        }
+      ]
+    },
+    {
+      "id": "parking_a_029",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 6,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 597,
+          "y": 835
+        },
+        {
+          "x": 716,
+          "y": 835
+        },
+        {
+          "x": 713,
+          "y": 1081
+        },
+        {
+          "x": 594,
+          "y": 1081
+        }
+      ]
+    },
+    {
+      "id": "parking_a_030",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 7,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 716,
+          "y": 835
+        },
+        {
+          "x": 836,
+          "y": 835
+        },
+        {
+          "x": 833,
+          "y": 1082
+        },
+        {
+          "x": 713,
+          "y": 1081
+        }
+      ]
+    },
+    {
+      "id": "parking_a_031",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 8,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 836,
+          "y": 835
+        },
+        {
+          "x": 955,
+          "y": 835
+        },
+        {
+          "x": 953,
+          "y": 1082
+        },
+        {
+          "x": 833,
+          "y": 1082
+        }
+      ]
+    },
+    {
+      "id": "parking_a_032",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 9,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 955,
+          "y": 835
+        },
+        {
+          "x": 1075,
+          "y": 835
+        },
+        {
+          "x": 1073,
+          "y": 1082
+        },
+        {
+          "x": 953,
+          "y": 1082
+        }
+      ]
+    },
+    {
+      "id": "parking_a_033",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_02",
+      "zone": 2,
+      "col": 10,
+      "row": 2,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1075,
+          "y": 835
+        },
+        {
+          "x": 1195,
+          "y": 835
+        },
+        {
+          "x": 1193,
+          "y": 1082
+        },
+        {
+          "x": 1073,
+          "y": 1082
+        }
+      ]
+    },
+    {
+      "id": "parking_a_034",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_03",
+      "zone": 3,
+      "col": 1,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1633,
+          "y": 1033
+        },
+        {
+          "x": 1632,
+          "y": 916
+        },
+        {
+          "x": 1907,
+          "y": 912
+        },
+        {
+          "x": 1911,
+          "y": 1030
+        }
+      ]
+    },
+    {
+      "id": "parking_a_035",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_03",
+      "zone": 3,
+      "col": 2,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1632,
+          "y": 916
+        },
+        {
+          "x": 1631,
+          "y": 802
+        },
+        {
+          "x": 1902,
+          "y": 798
+        },
+        {
+          "x": 1907,
+          "y": 912
+        }
+      ]
+    },
+    {
+      "id": "parking_a_036",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_03",
+      "zone": 3,
+      "col": 3,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1631,
+          "y": 802
+        },
+        {
+          "x": 1630,
+          "y": 691
+        },
+        {
+          "x": 1898,
+          "y": 685
+        },
+        {
+          "x": 1902,
+          "y": 798
+        }
+      ]
+    },
+    {
+      "id": "parking_a_037",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_03",
+      "zone": 3,
+      "col": 4,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1630,
+          "y": 691
+        },
+        {
+          "x": 1629,
+          "y": 582
+        },
+        {
+          "x": 1894,
+          "y": 576
+        },
+        {
+          "x": 1898,
+          "y": 685
+        }
+      ]
+    },
+    {
+      "id": "parking_a_038",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_03",
+      "zone": 3,
+      "col": 5,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1629,
+          "y": 582
+        },
+        {
+          "x": 1628,
+          "y": 476
+        },
+        {
+          "x": 1890,
+          "y": 468
+        },
+        {
+          "x": 1894,
+          "y": 576
+        }
+      ]
+    },
+    {
+      "id": "parking_a_039",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_03",
+      "zone": 3,
+      "col": 6,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1628,
+          "y": 476
+        },
+        {
+          "x": 1627,
+          "y": 372
+        },
+        {
+          "x": 1886,
+          "y": 364
+        },
+        {
+          "x": 1890,
+          "y": 468
+        }
+      ]
+    },
+    {
+      "id": "parking_a_040",
+      "parking_id": "parking_a",
+      "camera_id": "cam_a",
+      "zone_id": "parking_a_zone_03",
+      "zone": 3,
+      "col": 7,
+      "row": 1,
+      "enabled": true,
+      "polygon": [
+        {
+          "x": 1627,
+          "y": 372
+        },
+        {
+          "x": 1626,
+          "y": 270
+        },
+        {
+          "x": 1883,
+          "y": 261
+        },
+        {
+          "x": 1886,
+          "y": 364
+        }
+      ]
+    }
+  ]
+}

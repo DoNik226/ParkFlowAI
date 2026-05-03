@@ -1,0 +1,41 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libgl1 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# CPU-only PyTorch, без CUDA/NVIDIA-пакетов
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision
+
+# Зависимости Ultralytics, но OpenCV ставим headless
+RUN pip install --no-cache-dir \
+    numpy \
+    opencv-python-headless \
+    pillow \
+    pyyaml \
+    requests \
+    scipy \
+    tqdm \
+    psutil \
+    py-cpuinfo \
+    pandas \
+    matplotlib \
+    seaborn \
+    ultralytics-thop
+
+# Ставим ultralytics без его зависимостей,
+# чтобы он не потянул opencv-python и CUDA-пакеты
+RUN pip install --no-cache-dir ultralytics --no-deps
+
+COPY back ./back
+
+CMD ["python", "-m", "back.app.services.run_parking_stream"]

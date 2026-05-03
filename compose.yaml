@@ -1,4 +1,18 @@
 services:
+
+
+  detector:
+    build:
+      context: .
+      dockerfile: detector/Dockerfile
+    image: parkflowai-detector
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./back:/app/back
+    depends_on:
+      - backend
+    restart: unless-stopped  
   db:
     image: postgres:16-alpine
     environment:
@@ -34,9 +48,34 @@ services:
       INITIAL_ADMIN_FULL_NAME: ParkFlow Admin
     ports:
       - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
     depends_on:
       db:
         condition: service_healthy
+
+  detector-parking-a:
+    build:
+      context: .
+      dockerfile: back/Dockerfile.detector
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    command: >
+      python -m back.app.services.run_parking_stream
+      --parking-id parking_a
+      --layout /app/data/parkings/parking_a/layout.json
+      --source /app/data/parkings/parking_a/test_video.mp4
+      --model /app/models/best.pt
+      --interval-sec 2
+      --conf 0.20
+      --imgsz 640
+      --save-json /app/data/parkings/parking_a/occupancy.json
+      --save-frame /app/data/parkings/parking_a/debug_detection.jpg
+    depends_on:
+      - backend
+    restart: unless-stopped
 
   frontend:
     build:
