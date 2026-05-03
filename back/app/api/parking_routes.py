@@ -220,6 +220,21 @@ def sync_occupancy_from_runtime_file(db: Session, parking) -> None:
     if isinstance(occupancy, dict) and isinstance(occupancy.get("spots"), list):
         ParkingLayoutStorageService(db).save_occupancy_to_db(parking.id, occupancy)
 
+def serialize_camera(camera) -> dict | None:
+    if not camera:
+        return None
+
+    return {
+        "id": camera.id,
+        "parking_id": camera.parking_id,
+        "name": camera.name,
+        "source_type": camera.source_type,
+        "source_url": camera.source_url,
+        "test_video_path": camera.test_video_path,
+        "status": camera.status,
+        "is_active": camera.is_active,
+        "last_snapshot_path": camera.last_snapshot_path,
+    }
 
 def summarize_parking(db: Session, parking) -> dict:
     ensure_parking_files(db, parking)
@@ -230,6 +245,16 @@ def summarize_parking(db: Session, parking) -> dict:
 
     layout = storage.build_layout_from_db(parking)
     occupancy = storage.build_occupancy_from_db(parking)
+
+    camera_repo = CameraRepository(db)
+    cameras = camera_repo.get_by_parking(parking.id)
+    serialized_cameras = [
+        serialize_camera(camera)
+        for camera in cameras
+        if camera is not None
+    ]
+
+    first_camera = serialized_cameras[0] if serialized_cameras else None
 
     return {
         "id": parking.slug,
@@ -247,6 +272,16 @@ def summarize_parking(db: Session, parking) -> dict:
         "spots_count": len(layout.get("spots", [])),
         "zones_count": len(layout.get("zones", [])),
         "summary": occupancy.get("summary", {}),
+
+        # Для frontend ParkingView.vue
+        "camera": first_camera,
+        "cameras": serialized_cameras,
+        "camera_id": first_camera.get("id") if first_camera else None,
+        "camera_name": first_camera.get("name") if first_camera else None,
+        "source_type": first_camera.get("source_type") if first_camera else None,
+        "source_url": first_camera.get("source_url") if first_camera else None,
+        "test_video_path": first_camera.get("test_video_path") if first_camera else None,
+        "camera_status": first_camera.get("status") if first_camera else None,
     }
 
 

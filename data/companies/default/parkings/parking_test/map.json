@@ -1,395 +1,1156 @@
 {
-  "version": 1,
   "parking": {
     "id": "parking_test",
     "name": "Парковка тестовая",
     "db_id": 1,
     "company_id": 1
   },
-  "frame_meta": {
-    "width": 1920,
-    "height": 1080
-  },
   "entrances": [
     {
-      "id": "entrance_1777550080168_1",
+      "x": 1454.84,
+      "y": 1066.99,
+      "id": "entrance_1777819558823_42",
       "name": "Въезд 1",
-      "vertex_id": "entrance_1777550080168_1",
-      "x": 1456.6,
-      "y": 1058.21,
-      "parking_id": "parking_test"
+      "vertex_id": "entrance_1777819558823_42",
+      "parking_id": "parking_test",
+      "road_vertex_id": "entrance_1777819558823_42",
+      "road_vertex_db_id": 42
     }
   ],
   "vertices": [
     {
-      "id": "entrance_1777550080168_1",
-      "type": "entrance",
-      "x": 1456.6,
-      "y": 1058.21,
+      "x": 63.0925,
+      "y": 149.2375,
+      "id": "vertex_for_spot_001",
+      "label": "001",
+      "source": "spot",
+      "spot_id": "spot_001",
+      "db_id": 1,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 178.2425,
+      "y": 149.1775,
+      "id": "vertex_for_spot_002",
+      "label": "002",
+      "source": "spot",
+      "spot_id": "spot_002",
+      "db_id": 2,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 293.3925,
+      "y": 149.1175,
+      "id": "vertex_for_spot_003",
+      "label": "003",
+      "source": "spot",
+      "spot_id": "spot_003",
+      "db_id": 3,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 408.53749999999997,
+      "y": 149.0525,
+      "id": "vertex_for_spot_004",
+      "label": "004",
+      "source": "spot",
+      "spot_id": "spot_004",
+      "db_id": 4,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 523.685,
+      "y": 148.9925,
+      "id": "vertex_for_spot_005",
+      "label": "005",
+      "source": "spot",
+      "spot_id": "spot_005",
+      "db_id": 5,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 638.835,
+      "y": 148.9325,
+      "id": "vertex_for_spot_006",
+      "label": "006",
+      "source": "spot",
+      "spot_id": "spot_006",
+      "db_id": 6,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 753.985,
+      "y": 148.87,
+      "id": "vertex_for_spot_007",
+      "label": "007",
+      "source": "spot",
+      "spot_id": "spot_007",
+      "db_id": 7,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 869.1325,
+      "y": 148.81,
+      "id": "vertex_for_spot_008",
+      "label": "008",
+      "source": "spot",
+      "spot_id": "spot_008",
+      "db_id": 8,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 984.2800000000001,
+      "y": 148.7475,
+      "id": "vertex_for_spot_009",
+      "label": "009",
+      "source": "spot",
+      "spot_id": "spot_009",
+      "db_id": 9,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1099.43,
+      "y": 148.6875,
+      "id": "vertex_for_spot_010",
+      "label": "010",
+      "source": "spot",
+      "spot_id": "spot_010",
+      "db_id": 10,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1214.5774999999999,
+      "y": 148.6275,
+      "id": "vertex_for_spot_011",
+      "label": "011",
+      "source": "spot",
+      "spot_id": "spot_011",
+      "db_id": 11,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1329.7224999999999,
+      "y": 148.5625,
+      "id": "vertex_for_spot_012",
+      "label": "012",
+      "source": "spot",
+      "spot_id": "spot_012",
+      "db_id": 12,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1444.8725,
+      "y": 148.5025,
+      "id": "vertex_for_spot_013",
+      "label": "013",
+      "source": "spot",
+      "spot_id": "spot_013",
+      "db_id": 13,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1560.0225,
+      "y": 148.4425,
+      "id": "vertex_for_spot_014",
+      "label": "014",
+      "source": "spot",
+      "spot_id": "spot_014",
+      "db_id": 14,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 69.9125,
+      "y": 710.005,
+      "id": "vertex_for_spot_015",
+      "label": "015",
+      "source": "spot",
+      "spot_id": "spot_015",
+      "db_id": 15,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 188.33749999999998,
+      "y": 710.1775,
+      "id": "vertex_for_spot_016",
+      "label": "016",
+      "source": "spot",
+      "spot_id": "spot_016",
+      "db_id": 16,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 306.76250000000005,
+      "y": 710.35,
+      "id": "vertex_for_spot_017",
+      "label": "017",
+      "source": "spot",
+      "spot_id": "spot_017",
+      "db_id": 17,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 425.1875,
+      "y": 710.5225,
+      "id": "vertex_for_spot_018",
+      "label": "018",
+      "source": "spot",
+      "spot_id": "spot_018",
+      "db_id": 18,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 543.6125,
+      "y": 710.6975,
+      "id": "vertex_for_spot_019",
+      "label": "019",
+      "source": "spot",
+      "spot_id": "spot_019",
+      "db_id": 19,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 662.0375,
+      "y": 710.87,
+      "id": "vertex_for_spot_020",
+      "label": "020",
+      "source": "spot",
+      "spot_id": "spot_020",
+      "db_id": 20,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 780.465,
+      "y": 711.0425,
+      "id": "vertex_for_spot_021",
+      "label": "021",
+      "source": "spot",
+      "spot_id": "spot_021",
+      "db_id": 21,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 898.8924999999999,
+      "y": 711.215,
+      "id": "vertex_for_spot_022",
+      "label": "022",
+      "source": "spot",
+      "spot_id": "spot_022",
+      "db_id": 22,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1017.3175000000001,
+      "y": 711.3875,
+      "id": "vertex_for_spot_023",
+      "label": "023",
+      "source": "spot",
+      "spot_id": "spot_023",
+      "db_id": 23,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1135.7425,
+      "y": 711.5625,
+      "id": "vertex_for_spot_024",
+      "label": "024",
+      "source": "spot",
+      "spot_id": "spot_024",
+      "db_id": 24,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 63.26500000000001,
+      "y": 953.24,
+      "id": "vertex_for_spot_025",
+      "label": "025",
+      "source": "spot",
+      "spot_id": "spot_025",
+      "db_id": 25,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 182.20999999999998,
+      "y": 953.4125,
+      "id": "vertex_for_spot_026",
+      "label": "026",
+      "source": "spot",
+      "spot_id": "spot_026",
+      "db_id": 26,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 301.15500000000003,
+      "y": 953.5849999999999,
+      "id": "vertex_for_spot_027",
+      "label": "027",
+      "source": "spot",
+      "spot_id": "spot_027",
+      "db_id": 27,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 420.09499999999997,
+      "y": 953.7574999999999,
+      "id": "vertex_for_spot_028",
+      "label": "028",
+      "source": "spot",
+      "spot_id": "spot_028",
+      "db_id": 28,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 539.0400000000001,
+      "y": 953.9325000000001,
+      "id": "vertex_for_spot_029",
+      "label": "029",
+      "source": "spot",
+      "spot_id": "spot_029",
+      "db_id": 29,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 657.985,
+      "y": 954.105,
+      "id": "vertex_for_spot_030",
+      "label": "030",
+      "source": "spot",
+      "spot_id": "spot_030",
+      "db_id": 30,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 776.9274999999999,
+      "y": 954.2775,
+      "id": "vertex_for_spot_031",
+      "label": "031",
+      "source": "spot",
+      "spot_id": "spot_031",
+      "db_id": 31,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 895.8700000000001,
+      "y": 954.45,
+      "id": "vertex_for_spot_032",
+      "label": "032",
+      "source": "spot",
+      "spot_id": "spot_032",
+      "db_id": 32,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1014.815,
+      "y": 954.6225000000001,
+      "id": "vertex_for_spot_033",
+      "label": "033",
+      "source": "spot",
+      "spot_id": "spot_033",
+      "db_id": 33,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1133.76,
+      "y": 954.7975,
+      "id": "vertex_for_spot_034",
+      "label": "034",
+      "source": "spot",
+      "spot_id": "spot_034",
+      "db_id": 34,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1765.9475000000002,
+      "y": 975.5125,
+      "id": "vertex_for_spot_035",
+      "label": "035",
+      "source": "spot",
+      "spot_id": "spot_035",
+      "db_id": 35,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1764.2225,
+      "y": 866.71,
+      "id": "vertex_for_spot_036",
+      "label": "036",
+      "source": "spot",
+      "spot_id": "spot_036",
+      "db_id": 36,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1762.4975,
+      "y": 757.9075,
+      "id": "vertex_for_spot_037",
+      "label": "037",
+      "source": "spot",
+      "spot_id": "spot_037",
+      "db_id": 37,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1760.7725,
+      "y": 649.1075000000001,
+      "id": "vertex_for_spot_038",
+      "label": "038",
+      "source": "spot",
+      "spot_id": "spot_038",
+      "db_id": 38,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1759.0475,
+      "y": 540.3075,
+      "id": "vertex_for_spot_039",
+      "label": "039",
+      "source": "spot",
+      "spot_id": "spot_039",
+      "db_id": 39,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1757.3224999999998,
+      "y": 431.50499999999994,
+      "id": "vertex_for_spot_040",
+      "label": "040",
+      "source": "spot",
+      "spot_id": "spot_040",
+      "db_id": 40,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1755.5974999999999,
+      "y": 322.7025,
+      "id": "vertex_for_spot_041",
+      "label": "041",
+      "source": "spot",
+      "spot_id": "spot_041",
+      "db_id": 41,
+      "type": "spot_access",
+      "is_spot": true,
+      "is_entrance": false
+    },
+    {
+      "x": 1454.84,
+      "y": 1066.99,
+      "id": "entrance_1777819558823_42",
       "name": "Въезд 1",
-      "spot_id": null
+      "type": "entrance",
+      "spot_id": null,
+      "db_id": 42,
+      "label": "Въезд 1",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "road_1777550086724_2",
-      "type": "road",
-      "x": 1440.79,
-      "y": 427.58,
+      "x": 1456.6,
+      "y": 979.16,
+      "id": "road_1777819563520_43",
       "name": "",
-      "spot_id": null
-    },
-    {
-      "id": "road_1777550095299_3",
       "type": "road",
-      "x": 39,
-      "y": 420.55,
+      "spot_id": null,
+      "db_id": 43,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
+    },
+    {
+      "x": 1454.84,
+      "y": 857.95,
+      "id": "road_1777819567285_44",
       "name": "",
-      "spot_id": null
+      "type": "road",
+      "spot_id": null,
+      "db_id": 44,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_001",
-      "type": "spot_access",
-      "x": 54.81,
-      "y": 258.94,
-      "name": "001",
-      "spot_id": "spot_001"
-    },
-    {
-      "id": "spot_access_spot_002",
-      "type": "spot_access",
-      "x": 168.99,
-      "y": 262.45,
-      "name": "002",
-      "spot_id": "spot_002"
-    },
-    {
-      "id": "spot_access_spot_003",
-      "type": "spot_access",
-      "x": 286.68,
-      "y": 260.7,
-      "name": "003",
-      "spot_id": "spot_003"
-    },
-    {
-      "id": "spot_access_spot_004",
-      "type": "spot_access",
-      "x": 402.62,
-      "y": 260.7,
-      "name": "004",
-      "spot_id": "spot_004"
-    },
-    {
-      "id": "spot_access_spot_005",
-      "type": "spot_access",
-      "x": 518.56,
-      "y": 258.94,
-      "name": "005",
-      "spot_id": "spot_005"
-    },
-    {
-      "id": "spot_access_spot_006",
-      "type": "spot_access",
-      "x": 630.98,
-      "y": 258.94,
-      "name": "006",
-      "spot_id": "spot_006"
-    },
-    {
-      "id": "spot_access_spot_007",
-      "type": "spot_access",
-      "x": 752.19,
-      "y": 260.7,
-      "name": "007",
-      "spot_id": "spot_007"
-    },
-    {
-      "id": "spot_access_spot_008",
-      "type": "spot_access",
-      "x": 864.61,
-      "y": 262.45,
-      "name": "008",
-      "spot_id": "spot_008"
-    },
-    {
-      "id": "spot_access_spot_009",
-      "type": "spot_access",
-      "x": 984.07,
-      "y": 264.21,
-      "name": "009",
-      "spot_id": "spot_009"
-    },
-    {
-      "id": "spot_access_spot_010",
-      "type": "spot_access",
-      "x": 1098.25,
-      "y": 260.7,
-      "name": "010",
-      "spot_id": "spot_010"
-    },
-    {
-      "id": "spot_access_spot_011",
-      "type": "spot_access",
-      "x": 1212.43,
-      "y": 258.94,
-      "name": "011",
-      "spot_id": "spot_011"
-    },
-    {
-      "id": "spot_access_spot_012",
-      "type": "spot_access",
-      "x": 1333.64,
-      "y": 260.7,
-      "name": "012",
-      "spot_id": "spot_012"
-    },
-    {
-      "id": "spot_access_spot_013",
-      "type": "spot_access",
       "x": 1449.57,
-      "y": 260.7,
-      "name": "013",
-      "spot_id": "spot_013"
+      "y": 750.8,
+      "id": "road_1777819570077_45",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 45,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_014",
-      "type": "spot_access",
-      "x": 1562,
-      "y": 258.94,
-      "name": "014",
-      "spot_id": "spot_014"
+      "x": 1451.33,
+      "y": 636.61,
+      "id": "road_1777819572536_46",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 46,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_015",
-      "type": "spot_access",
-      "x": 65.35,
-      "y": 596.21,
-      "name": "015",
-      "spot_id": "spot_015"
+      "x": 1440.79,
+      "y": 525.95,
+      "id": "road_1777819576158_47",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 47,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_016",
-      "type": "spot_access",
-      "x": 190.07,
-      "y": 590.94,
-      "name": "016",
-      "spot_id": "spot_016"
+      "x": 1442.55,
+      "y": 420.55,
+      "id": "road_1777819578358_48",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 48,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_017",
-      "type": "spot_access",
-      "x": 316.55,
-      "y": 592.7,
-      "name": "017",
-      "spot_id": "spot_017"
+      "x": 1549.7,
+      "y": 336.23,
+      "id": "road_1777819580301_49",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 49,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_018",
-      "type": "spot_access",
-      "x": 416.67,
-      "y": 597.97,
-      "name": "018",
-      "spot_id": "spot_018"
+      "x": 1314.31,
+      "y": 425.82,
+      "id": "road_1777819584016_50",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 50,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_019",
-      "type": "spot_access",
-      "x": 548.42,
-      "y": 596.21,
-      "name": "019",
-      "spot_id": "spot_019"
+      "x": 1196.62,
+      "y": 420.55,
+      "id": "road_1777819585387_51",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 51,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_020",
-      "type": "spot_access",
-      "x": 662.6,
-      "y": 599.73,
-      "name": "020",
-      "spot_id": "spot_020"
+      "x": 1078.92,
+      "y": 418.79,
+      "id": "road_1777819586753_52",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 52,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_021",
-      "type": "spot_access",
-      "x": 778.54,
-      "y": 597.97,
-      "name": "021",
-      "spot_id": "spot_021"
+      "x": 975.28,
+      "y": 418.79,
+      "id": "road_1777819587669_53",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 53,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_022",
-      "type": "spot_access",
-      "x": 901.5,
-      "y": 592.7,
-      "name": "022",
-      "spot_id": "spot_022"
+      "x": 869.88,
+      "y": 417.04,
+      "id": "road_1777819588683_54",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 54,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_023",
-      "type": "spot_access",
-      "x": 1013.93,
-      "y": 594.46,
-      "name": "023",
-      "spot_id": "spot_023"
+      "x": 750.43,
+      "y": 420.55,
+      "id": "road_1777819589503_55",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 55,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_024",
-      "type": "spot_access",
-      "x": 1128.11,
-      "y": 599.73,
-      "name": "024",
-      "spot_id": "spot_024"
+      "x": 645.04,
+      "y": 429.33,
+      "id": "road_1777819590326_56",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 56,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_025",
-      "type": "spot_access",
-      "x": 67.82,
-      "y": 955.13,
-      "name": "025",
-      "spot_id": "spot_025"
+      "x": 522.07,
+      "y": 427.58,
+      "id": "road_1777819591034_57",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 57,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_026",
-      "type": "spot_access",
-      "x": 186.26,
-      "y": 956.06,
-      "name": "026",
-      "spot_id": "spot_026"
+      "x": 399.11,
+      "y": 424.06,
+      "id": "road_1777819592228_58",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 58,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_027",
-      "type": "spot_access",
-      "x": 304.7,
-      "y": 957,
-      "name": "027",
-      "spot_id": "spot_027"
+      "x": 293.71,
+      "y": 422.31,
+      "id": "road_1777819593147_59",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 59,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_028",
-      "type": "spot_access",
-      "x": 423.14,
-      "y": 957.94,
-      "name": "028",
-      "spot_id": "spot_028"
+      "x": 191.82,
+      "y": 424.06,
+      "id": "road_1777819594085_60",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 60,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     },
     {
-      "id": "spot_access_spot_029",
-      "type": "spot_access",
-      "x": 541.58,
-      "y": 958.88,
-      "name": "029",
-      "spot_id": "spot_029"
-    },
-    {
-      "id": "spot_access_spot_030",
-      "type": "spot_access",
-      "x": 660.01,
-      "y": 959.81,
-      "name": "030",
-      "spot_id": "spot_030"
-    },
-    {
-      "id": "spot_access_spot_031",
-      "type": "spot_access",
-      "x": 778.45,
-      "y": 960.75,
-      "name": "031",
-      "spot_id": "spot_031"
-    },
-    {
-      "id": "spot_access_spot_032",
-      "type": "spot_access",
-      "x": 896.89,
-      "y": 961.69,
-      "name": "032",
-      "spot_id": "spot_032"
-    },
-    {
-      "id": "spot_access_spot_033",
-      "type": "spot_access",
-      "x": 1015.33,
-      "y": 962.63,
-      "name": "033",
-      "spot_id": "spot_033"
-    },
-    {
-      "id": "spot_access_spot_034",
-      "type": "spot_access",
-      "x": 1126.35,
-      "y": 966.86,
-      "name": "034",
-      "spot_id": "spot_034"
-    },
-    {
-      "id": "spot_access_spot_035",
-      "type": "spot_access",
-      "x": 1639.29,
-      "y": 323.93,
-      "name": "035",
-      "spot_id": "spot_035"
-    },
-    {
-      "id": "spot_access_spot_036",
-      "type": "spot_access",
-      "x": 1641.05,
-      "y": 432.85,
-      "name": "036",
-      "spot_id": "spot_036"
-    },
-    {
-      "id": "spot_access_spot_037",
-      "type": "spot_access",
-      "x": 1639.29,
-      "y": 540,
-      "name": "037",
-      "spot_id": "spot_037"
-    },
-    {
-      "id": "spot_access_spot_038",
-      "type": "spot_access",
-      "x": 1637.53,
-      "y": 645.4,
-      "name": "038",
-      "spot_id": "spot_038"
-    },
-    {
-      "id": "spot_access_spot_039",
-      "type": "spot_access",
-      "x": 1646.32,
-      "y": 752.55,
-      "name": "039",
-      "spot_id": "spot_039"
-    },
-    {
-      "id": "spot_access_spot_040",
-      "type": "spot_access",
-      "x": 1642.8,
-      "y": 863.22,
-      "name": "040",
-      "spot_id": "spot_040"
-    },
-    {
-      "id": "spot_access_spot_041",
-      "type": "spot_access",
-      "x": 1642.8,
-      "y": 973.89,
-      "name": "041",
-      "spot_id": "spot_041"
+      "x": 56.56,
+      "y": 427.58,
+      "id": "road_1777819595208_61",
+      "name": "",
+      "type": "road",
+      "spot_id": null,
+      "db_id": 61,
+      "label": "",
+      "is_spot": false,
+      "is_entrance": false
     }
   ],
   "edges": [
     {
-      "id": "edge_1777550099740_1",
-      "source": "road_1777550095299_3",
-      "destination": "road_1777550086724_2",
-      "length_meters": 1401.81,
-      "is_bidirectional": true,
-      "one_way": false
+      "id": "edge_1777819649175_1",
+      "source": "road_1777819595208_61",
+      "one_way": false,
+      "destination": "vertex_for_spot_001",
+      "length_meters": 168.72,
+      "is_bidirectional": true
     },
     {
-      "id": "edge_1777550103249_2",
-      "source": "road_1777550086724_2",
-      "destination": "entrance_1777550080168_1",
-      "length_meters": 630.83,
-      "is_bidirectional": true,
-      "one_way": false
+      "id": "edge_1777819651485_2",
+      "source": "road_1777819594085_60",
+      "one_way": false,
+      "destination": "vertex_for_spot_002",
+      "length_meters": 165.46,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819653335_3",
+      "source": "road_1777819595208_61",
+      "one_way": false,
+      "destination": "road_1777819594085_60",
+      "length_meters": 135.31,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819654969_4",
+      "source": "road_1777819594085_60",
+      "one_way": false,
+      "destination": "road_1777819593147_59",
+      "length_meters": 101.9,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819656995_5",
+      "source": "road_1777819592228_58",
+      "one_way": false,
+      "destination": "road_1777819593147_59",
+      "length_meters": 105.41,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819658642_6",
+      "source": "road_1777819591034_57",
+      "one_way": false,
+      "destination": "road_1777819592228_58",
+      "length_meters": 123.01,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819660645_7",
+      "source": "road_1777819590326_56",
+      "one_way": false,
+      "destination": "road_1777819591034_57",
+      "length_meters": 122.98,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819662088_8",
+      "source": "road_1777819589503_55",
+      "one_way": false,
+      "destination": "road_1777819590326_56",
+      "length_meters": 105.76,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819663645_9",
+      "source": "road_1777819588683_54",
+      "one_way": false,
+      "destination": "road_1777819589503_55",
+      "length_meters": 119.5,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819665563_10",
+      "source": "road_1777819587669_53",
+      "one_way": false,
+      "destination": "road_1777819588683_54",
+      "length_meters": 105.41,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819667101_11",
+      "source": "road_1777819586753_52",
+      "one_way": false,
+      "destination": "road_1777819587669_53",
+      "length_meters": 103.64,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819669106_12",
+      "source": "road_1777819585387_51",
+      "one_way": false,
+      "destination": "road_1777819586753_52",
+      "length_meters": 117.71,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819670750_13",
+      "source": "road_1777819584016_50",
+      "one_way": false,
+      "destination": "road_1777819585387_51",
+      "length_meters": 117.81,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819672545_14",
+      "source": "road_1777819578358_48",
+      "one_way": false,
+      "destination": "road_1777819584016_50",
+      "length_meters": 128.35,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819674548_15",
+      "source": "road_1777819580301_49",
+      "one_way": false,
+      "destination": "road_1777819578358_48",
+      "length_meters": 136.35,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819677336_16",
+      "source": "road_1777819578358_48",
+      "one_way": false,
+      "destination": "road_1777819576158_47",
+      "length_meters": 105.41,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819678749_17",
+      "source": "road_1777819576158_47",
+      "one_way": false,
+      "destination": "road_1777819572536_46",
+      "length_meters": 111.16,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819680266_18",
+      "source": "road_1777819572536_46",
+      "one_way": false,
+      "destination": "road_1777819570077_45",
+      "length_meters": 114.2,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819681255_19",
+      "source": "road_1777819570077_45",
+      "one_way": false,
+      "destination": "road_1777819567285_44",
+      "length_meters": 107.28,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819682289_20",
+      "source": "road_1777819567285_44",
+      "one_way": false,
+      "destination": "road_1777819563520_43",
+      "length_meters": 121.22,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819683397_21",
+      "source": "road_1777819563520_43",
+      "one_way": false,
+      "destination": "entrance_1777819558823_42",
+      "length_meters": 87.85,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819686812_22",
+      "source": "vertex_for_spot_003",
+      "one_way": false,
+      "destination": "road_1777819593147_59",
+      "length_meters": 163.38,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819688833_23",
+      "source": "vertex_for_spot_004",
+      "one_way": false,
+      "destination": "road_1777819592228_58",
+      "length_meters": 159.89,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819691205_24",
+      "source": "vertex_for_spot_005",
+      "one_way": false,
+      "destination": "road_1777819591034_57",
+      "length_meters": 168.64,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819693204_25",
+      "source": "vertex_for_spot_006",
+      "one_way": false,
+      "destination": "road_1777819590326_56",
+      "length_meters": 172.29,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819695445_26",
+      "source": "vertex_for_spot_007",
+      "one_way": false,
+      "destination": "road_1777819589503_55",
+      "length_meters": 159.86,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819697589_27",
+      "source": "vertex_for_spot_008",
+      "one_way": false,
+      "destination": "road_1777819588683_54",
+      "length_meters": 151.11,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819699578_28",
+      "source": "vertex_for_spot_009",
+      "one_way": false,
+      "destination": "road_1777819587669_53",
+      "length_meters": 158.18,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819701731_29",
+      "source": "vertex_for_spot_010",
+      "one_way": false,
+      "destination": "road_1777819586753_52",
+      "length_meters": 159.27,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819703736_30",
+      "source": "vertex_for_spot_011",
+      "one_way": false,
+      "destination": "road_1777819585387_51",
+      "length_meters": 162.22,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819705770_31",
+      "source": "vertex_for_spot_012",
+      "one_way": false,
+      "destination": "road_1777819584016_50",
+      "length_meters": 167.21,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819708710_32",
+      "source": "vertex_for_spot_013",
+      "one_way": false,
+      "destination": "road_1777819580301_49",
+      "length_meters": 136.67,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819710371_33",
+      "source": "vertex_for_spot_014",
+      "one_way": false,
+      "destination": "road_1777819580301_49",
+      "length_meters": 85.21,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819715167_34",
+      "source": "vertex_for_spot_041",
+      "one_way": false,
+      "destination": "road_1777819580301_49",
+      "length_meters": 89.74,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819718205_35",
+      "source": "road_1777819580301_49",
+      "one_way": false,
+      "destination": "vertex_for_spot_040",
+      "length_meters": 133.05,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819721277_36",
+      "source": "road_1777819576158_47",
+      "one_way": false,
+      "destination": "vertex_for_spot_039",
+      "length_meters": 198.62,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819723858_37",
+      "source": "road_1777819572536_46",
+      "one_way": false,
+      "destination": "vertex_for_spot_038",
+      "length_meters": 191.55,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819726333_38",
+      "source": "road_1777819570077_45",
+      "one_way": false,
+      "destination": "vertex_for_spot_037",
+      "length_meters": 196.75,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819729652_39",
+      "source": "road_1777819567285_44",
+      "one_way": false,
+      "destination": "vertex_for_spot_036",
+      "length_meters": 189.79,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819731982_40",
+      "source": "road_1777819563520_43",
+      "one_way": false,
+      "destination": "vertex_for_spot_035",
+      "length_meters": 198.57,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819734587_41",
+      "source": "road_1777819585387_51",
+      "one_way": false,
+      "destination": "vertex_for_spot_024",
+      "length_meters": 179.43,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819740647_43",
+      "source": "road_1777819588683_54",
+      "one_way": false,
+      "destination": "vertex_for_spot_022",
+      "length_meters": 181.37,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819743126_44",
+      "source": "road_1777819589503_55",
+      "one_way": false,
+      "destination": "vertex_for_spot_021",
+      "length_meters": 167.63,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819745212_45",
+      "source": "road_1777819590326_56",
+      "one_way": false,
+      "destination": "vertex_for_spot_020",
+      "length_meters": 169.08,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819748124_46",
+      "source": "road_1777819591034_57",
+      "one_way": false,
+      "destination": "vertex_for_spot_019",
+      "length_meters": 162.98,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819750865_47",
+      "source": "road_1777819592228_58",
+      "one_way": false,
+      "destination": "vertex_for_spot_018",
+      "length_meters": 173.04,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819752827_48",
+      "source": "vertex_for_spot_017",
+      "one_way": false,
+      "destination": "road_1777819593147_59",
+      "length_meters": 174.23,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819754859_49",
+      "source": "road_1777819594085_60",
+      "one_way": false,
+      "destination": "vertex_for_spot_016",
+      "length_meters": 179.25,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819756810_50",
+      "source": "vertex_for_spot_015",
+      "one_way": false,
+      "destination": "road_1777819595208_61",
+      "length_meters": 168.65,
+      "is_bidirectional": true
+    },
+    {
+      "id": "edge_1777819831927_50",
+      "source": "road_1777819587669_53",
+      "one_way": false,
+      "destination": "vertex_for_spot_023",
+      "length_meters": 188.82,
+      "is_bidirectional": true
     }
   ]
 }

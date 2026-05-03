@@ -12,17 +12,20 @@ import ParkingCreateView from '@/views/ParkingCreateView.vue'
 import ParkingSetupView from '@/views/ParkingSetupView.vue'
 
 import UserManagement from '@/components/admin/UserManagement.vue'
-import CameraManagement from '@/components/admin/CameraManagement.vue'
 import EventLogViewer from '@/components/admin/EventLogViewer.vue'
 
 function isMobile() {
-  return window.innerWidth <= 768 || /Android|iPhone/i.test(navigator.userAgent)
+  return window.innerWidth <= 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+}
+
+function getUserHomePath() {
+  return isMobile() ? '/m' : '/main'
 }
 
 const routes = [
   {
     path: '/',
-    redirect: () => (isMobile() ? '/m' : '/main'),
+    redirect: () => getUserHomePath(),
   },
   {
     path: '/login',
@@ -48,7 +51,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
 
-  // Админский контур
   {
     path: '/admin',
     name: 'AdminHome',
@@ -93,9 +95,7 @@ const routes = [
       },
       {
         path: 'cameras',
-        name: 'AdminCameras',
-        component: CameraManagement,
-        meta: { requiresAuth: true, role: 'admin' },
+        redirect: '/admin',
       },
       {
         path: 'events',
@@ -126,11 +126,33 @@ router.beforeEach((to) => {
   }
 
   if (token && to.path === '/login') {
-    return role === 'admin' ? '/admin' : (isMobile() ? '/m' : '/main')
+    return role === 'admin' ? '/admin' : getUserHomePath()
   }
 
+  // Обычный пользователь не должен попадать в админку
   if (to.meta.role && to.meta.role !== role) {
-    return isMobile() ? '/m' : '/main'
+    return {
+      path: getUserHomePath(),
+      query: to.query,
+    }
+  }
+
+  // Если обычный пользователь с телефона попал на desktop-страницу,
+  // переводим его на мобильную карту.
+  if (token && role !== 'admin' && isMobile() && to.path === '/main') {
+    return {
+      path: '/m',
+      query: to.query,
+    }
+  }
+
+  // Если обычный пользователь с компьютера попал на мобильную страницу,
+  // переводим его на desktop-карту.
+  if (token && role !== 'admin' && !isMobile() && to.path === '/m') {
+    return {
+      path: '/main',
+      query: to.query,
+    }
   }
 
   return true

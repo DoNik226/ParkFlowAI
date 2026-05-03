@@ -43,13 +43,6 @@
           <span class="admin-label">Парковки</span>
         </button>
 
-        <button class="admin-item" @click="goCameras">
-          <div class="admin-card">
-            <img src="../assets/img/mobile-app.png" alt="Камеры">
-          </div>
-          <span class="admin-label">Камеры</span>
-        </button>
-
         <button class="admin-item" @click="goEvents">
           <div class="admin-card">
             <img src="../assets/img/save.png" alt="Журнал событий">
@@ -65,7 +58,7 @@
         </button>
       </div>
 
-      <!-- На /admin/users, /admin/parkings, /admin/cameras, /admin/events показывается только страница -->
+      <!-- На /admin/users, /admin/parkings, /admin/events показывается только страница -->
       <router-view v-else />
     </main>
   </div>
@@ -95,10 +88,6 @@ function goUsers() {
 
 function goParkings() {
   router.push('/admin/parkings')
-}
-
-function goCameras() {
-  router.push('/admin/cameras')
 }
 
 function goEvents() {
