@@ -9,7 +9,6 @@ from back.app.api.deps import (
     assert_same_company_or_super_admin,
     get_audit_logger,
     get_current_active_user,
-    require_admin,
 )
 from back.app.database import get_db
 from back.app.logger import AuditLogger
@@ -165,6 +164,16 @@ def build_detector_config(db: Session, parking, active: bool) -> dict:
     }
 
 
+def get_actor_label(current_user: User) -> str:
+    if current_user.role == UserRole.SUPER_ADMIN.value:
+        return "Суперадминистратор"
+
+    if current_user.role == UserRole.ADMIN.value:
+        return "Администратор"
+
+    return "Пользователь"
+
+
 @router.get("/status")
 def get_detector_status(
     parking_id: str,
@@ -197,7 +206,7 @@ def get_detector_status(
 @router.post("/start")
 def start_detector(
     parking_id: str,
-    current_user: Annotated[User, Depends(require_admin)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
     db: Annotated[Session, Depends(get_db)],
     audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
@@ -205,15 +214,19 @@ def start_detector(
     config = build_detector_config(db, parking, active=True)
 
     write_json(detector_control_path(db, parking), config)
+
+    actor_label = get_actor_label(current_user)
+
     audit_logger.log_admin_action(
         current_user.id,
-        "Администратор запустил детекцию",
+        f"{actor_label} запустил детекцию",
         parking_id=parking.id,
         details={
             "parking_slug": parking.slug,
             "camera_id": config["camera_id"],
             "source_type": config["source_type"],
             "source": config["source"],
+            "actor_role": current_user.role,
         },
     )
 
@@ -227,7 +240,7 @@ def start_detector(
 @router.post("/stop")
 def stop_detector(
     parking_id: str,
-    current_user: Annotated[User, Depends(require_admin)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
     db: Annotated[Session, Depends(get_db)],
     audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
@@ -238,14 +251,18 @@ def stop_detector(
     control["active"] = False
 
     write_json(control_file, control)
+
+    actor_label = get_actor_label(current_user)
+
     audit_logger.log_admin_action(
         current_user.id,
-        "Администратор остановил детекцию",
+        f"{actor_label} остановил детекцию",
         parking_id=parking.id,
         details={
             "parking_slug": parking.slug,
             "camera_id": control.get("camera_id"),
             "source_type": control.get("source_type"),
+            "actor_role": current_user.role,
         },
     )
 

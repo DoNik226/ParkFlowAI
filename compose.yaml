@@ -1,30 +1,4 @@
 services:
-
-
-  detector:
-    build:
-      context: .
-      dockerfile: detector/Dockerfile
-    image: parkflowai-detector
-    environment:
-      DATABASE_URL: postgresql://parkflow:parkflow@db:5432/parking_db
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: parking_db
-      DB_USER: parkflow
-      DB_PASSWORD: parkflow
-      SECRET_KEY: change-me-in-production
-      ALGORITHM: HS256
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-      - ./back:/app/back
-    depends_on:
-      db:
-        condition: service_healthy
-      backend:
-        condition: service_started
-    restart: unless-stopped  
   db:
     image: postgres:16-alpine
     environment:
@@ -45,71 +19,64 @@ services:
     build:
       context: .
       dockerfile: back/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://parkflow:parkflow@db:5432/parking_db
       DB_HOST: db
-      DB_PORT: 5432
+      DB_PORT: "5432"
       DB_NAME: parking_db
       DB_USER: parkflow
       DB_PASSWORD: parkflow
+      DATABASE_URL: postgresql://parkflow:parkflow@db:5432/parking_db
       SECRET_KEY: change-me-in-production
       ALGORITHM: HS256
-      INITIAL_ADMIN_USERNAME: admin
       INITIAL_ADMIN_EMAIL: admin@example.com
-      INITIAL_ADMIN_PASSWORD: adminadminadmin
       INITIAL_ADMIN_FULL_NAME: ParkFlow Admin
+      INITIAL_ADMIN_PASSWORD: adminadminadmin
+      INITIAL_ADMIN_USERNAME: admin
     ports:
       - "8000:8000"
     volumes:
       - ./data:/app/data
       - ./models:/app/models
-    depends_on:
-      db:
-        condition: service_healthy
 
-  detector-parking-a:
+  detector:
+    image: parkflowai-detector
     build:
       context: .
-      dockerfile: back/Dockerfile.detector
-    environment:
-      DATABASE_URL: postgresql://parkflow:parkflow@db:5432/parking_db
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: parking_db
-      DB_USER: parkflow
-      DB_PASSWORD: parkflow
-      SECRET_KEY: change-me-in-production
-      ALGORITHM: HS256
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-    command: >
-      python -m back.app.services.run_parking_stream
-      --parking-id parking_a
-      --layout /app/data/parkings/parking_a/layout.json
-      --source /app/data/parkings/parking_a/test_video.mp4
-      --model /app/models/best.pt
-      --interval-sec 2
-      --conf 0.20
-      --imgsz 640
-      --save-json /app/data/parkings/parking_a/occupancy.json
-      --save-frame /app/data/parkings/parking_a/debug_detection.jpg
+      dockerfile: detector/Dockerfile
     depends_on:
       db:
         condition: service_healthy
       backend:
         condition: service_started
     restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: parking_db
+      DB_USER: parkflow
+      DB_PASSWORD: parkflow
+      DATABASE_URL: postgresql://parkflow:parkflow@db:5432/parking_db
+      SECRET_KEY: change-me-in-production
+      ALGORITHM: HS256
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./back:/app/back
 
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
+    depends_on:
+      backend:
+        condition: service_started
     environment:
       VITE_API_URL: http://localhost:8000
     ports:
       - "5173:5173"
-    depends_on:
-      - backend
 
 volumes:
   postgres_data:

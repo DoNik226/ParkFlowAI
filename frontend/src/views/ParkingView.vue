@@ -18,8 +18,15 @@
         {{ errorMessage }}
       </div>
 
-      <div v-if="!isLoading && !errorMessage && !parkings.length" class="empty-state">
-        Парковки пока не созданы.
+      <div v-if="!isLoading && !errorMessage && !parkings.length" class="empty-state centered-empty">
+        <div>
+          <h2>Парковки пока не созданы</h2>
+          <p>Создайте первую парковку, чтобы настроить источник видео, разметку и карту.</p>
+
+          <button class="add-parking-btn" @click="createParking">
+            + Добавить парковку
+          </button>
+        </div>
       </div>
 
       <div v-else class="parking-list">
@@ -49,14 +56,6 @@
             </div>
 
             <div class="header-buttons">
-              <!-- <button class="map-btn" @click="openMap(parking.id)">
-                Карта
-              </button>
-
-              <button class="settings-btn" @click="openSetup(parking.id)">
-                Настройка
-              </button> -->
-
               <button
                 class="collapse-btn"
                 @click="toggleParking(parking.id)"
@@ -99,6 +98,7 @@
                     <th>Тип источника</th>
                     <th>Статус</th>
                     <th>URL / Видео</th>
+                    <th>Просмотр</th>
                   </tr>
                 </thead>
 
@@ -138,10 +138,22 @@
                         {{ getSourceDisplay(camera).sub }}
                       </div>
                     </td>
+
+                    <td class="preview-cell">
+                      <button
+                        v-if="canOpenSource(camera)"
+                        class="preview-btn"
+                        @click="openSourcePreview(parking, camera)"
+                      >
+                        {{ getSourceActionLabel(camera) }}
+                      </button>
+
+                      <span v-else class="preview-empty">—</span>
+                    </td>
                   </tr>
 
                   <tr v-if="!getParkingCameras(parking).length">
-                    <td colspan="4" class="empty-camera">
+                    <td colspan="5" class="empty-camera">
                       Источник камеры пока не настроен
                     </td>
                   </tr>
@@ -166,17 +178,54 @@
         </div>
       </div>
 
-      <div v-if="!isLoading && !errorMessage" class="center-button">
+      <div v-if="!isLoading && !errorMessage && parkings.length" class="add-after-list">
         <button class="add-parking-btn" @click="createParking">
-          Добавить парковку
+          + Добавить парковку
         </button>
+      </div>
+    </div>
+
+    <div v-if="sourcePreview.open" class="source-modal" @click.self="closeSourcePreview">
+      <div class="source-modal-content">
+        <div class="source-modal-header">
+          <div>
+            <h2>{{ sourcePreview.title }}</h2>
+            <p>{{ sourcePreview.subtitle }}</p>
+          </div>
+
+          <button class="source-modal-close" @click="closeSourcePreview">
+            ×
+          </button>
+        </div>
+
+        <div class="source-player-box">
+          <video
+            v-if="sourcePreview.type === 'video' && sourcePreview.url"
+            class="source-video"
+            :src="sourcePreview.url"
+            controls
+            autoplay
+            playsinline
+          />
+
+          <img
+            v-else-if="sourcePreview.type === 'rtsp' && sourcePreview.url"
+            class="source-stream"
+            :src="sourcePreview.url"
+            alt="Поток с камеры"
+          >
+
+          <div v-else class="source-preview-state">
+            {{ sourcePreview.error || 'Источник недоступен' }}
+          </div>
+        </div>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { parkingService } from '@/services/parking'
 
@@ -191,6 +240,16 @@ const notification = ref({
   show: false,
   message: '',
   type: 'success',
+})
+
+const sourcePreview = ref({
+  open: false,
+  type: '',
+  title: '',
+  subtitle: '',
+  url: '',
+  error: '',
+  objectUrl: '',
 })
 
 function showNotification(message, type = 'success') {
@@ -215,6 +274,10 @@ async function loadParkings() {
     parkings.value = Array.isArray(data)
       ? data.map(normalizeParking)
       : []
+
+    if (parkings.value.length && !expandedParking.value) {
+      expandedParking.value = parkings.value[0].id
+    }
   } catch (error) {
     console.error('Ошибка загрузки парковок:', error)
     errorMessage.value = 'Не удалось загрузить список парковок'
@@ -227,7 +290,7 @@ async function loadParkings() {
 function normalizeParking(parking) {
   const cameras = []
 
-  if (Array.isArray(parking.cameras)) {
+  if (Array.isArray(parking.cameras) && parking.cameras.length) {
     cameras.push(...parking.cameras)
   } else if (parking.camera) {
     cameras.push(parking.camera)
@@ -441,8 +504,96 @@ function getCameraStatusText(camera) {
   return 'не активно'
 }
 
+function canOpenSource(camera) {
+  if (isVideoSource(camera)) {
+    return hasVideoFile(camera)
+  }
+
+  if (isRtspSource(camera)) {
+    return hasRtspStream(camera)
+  }
+
+  return false
+}
+
+function getSourceActionLabel(camera) {
+  if (isVideoSource(camera)) {
+    return 'Видео'
+  }
+
+  if (isRtspSource(camera)) {
+    return 'Поток с камеры'
+  }
+
+  return 'Открыть'
+}
+
+function openSourcePreview(parking, camera) {
+  closeSourcePreview()
+
+  const type = getSourceType(camera)
+
+  if (type === 'video') {
+    sourcePreview.value = {
+      open: true,
+      type: 'video',
+      title: 'Видео',
+      subtitle: parking.name || 'Парковка',
+      url: parkingService.getSourceVideoUrl(parking.id),
+      error: '',
+      objectUrl: '',
+    }
+
+    return
+  }
+
+  if (type === 'rtsp' || type === 'stream') {
+    sourcePreview.value = {
+      open: true,
+      type: 'rtsp',
+      title: 'Поток с камеры',
+      subtitle: parking.name || 'Парковка',
+      url: parkingService.getCameraStreamUrl(parking.id),
+      error: '',
+      objectUrl: '',
+    }
+
+    return
+  }
+
+  sourcePreview.value = {
+    open: true,
+    type: '',
+    title: 'Источник',
+    subtitle: parking.name || 'Парковка',
+    url: '',
+    error: 'Источник не настроен',
+    objectUrl: '',
+  }
+}
+
+function closeSourcePreview() {
+  if (sourcePreview.value.objectUrl) {
+    URL.revokeObjectURL(sourcePreview.value.objectUrl)
+  }
+
+  sourcePreview.value = {
+    open: false,
+    type: '',
+    title: '',
+    subtitle: '',
+    url: '',
+    error: '',
+    objectUrl: '',
+  }
+}
+
 onMounted(() => {
   loadParkings()
+})
+
+onBeforeUnmount(() => {
+  closeSourcePreview()
 })
 </script>
 
@@ -460,6 +611,27 @@ onMounted(() => {
   padding: 34px 40px;
   width: 100%;
   box-sizing: border-box;
+}
+
+
+.add-parking-btn {
+  width: auto;
+  min-width: 210px;
+  height: 46px;
+  background-color: #2689e6;
+  color: white;
+  border: none;
+  padding: 0 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(38, 137, 230, 0.24);
+}
+
+.add-parking-btn:hover {
+  background-color: #1f78cc;
 }
 
 .page-top {
@@ -497,17 +669,6 @@ onMounted(() => {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-}
-
-.add-parking-btn {
-  background-color: #2689e6;
-  color: white;
-  border: none;
-  padding: 14px 38px;
-  border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  font-weight: 700;
 }
 
 .toast-notification {
@@ -583,6 +744,31 @@ onMounted(() => {
   color: #6b7280;
   border-radius: 14px;
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+}
+.centered-empty {
+  min-height: calc(100vh - 220px);
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.centered-empty h2 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 24px;
+}
+
+.centered-empty p {
+  max-width: 420px;
+  margin: 0 auto 22px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.add-after-list {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
 }
 
 .parking-list {
@@ -864,16 +1050,120 @@ onMounted(() => {
   margin-top: 18px;
 }
 
-.center-button {
+.preview-cell {
+  width: 150px;
+  white-space: nowrap;
+}
+
+.preview-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: #2689e6;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.preview-btn:hover {
+  background: #1f78cc;
+}
+
+.preview-empty {
+  color: #9ca3af;
+}
+
+.source-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.source-modal-content {
+  width: min(1100px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  background: #0f172a;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.source-modal-header {
+  min-height: 64px;
+  padding: 14px 18px;
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.source-modal-header h2 {
+  margin: 0 0 3px;
+  color: #111827;
+  font-size: 20px;
+}
+
+.source-modal-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.source-modal-close {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: #eef2f7;
+  color: #111827;
+  cursor: pointer;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.source-player-box {
   width: 100%;
-  margin-top: 12px;
+  min-height: min(620px, calc(100vh - 150px));
+  display: grid;
+  place-items: center;
+  background: #020617;
+}
+
+.source-video,
+.source-stream {
+  width: 100%;
+  max-height: calc(100vh - 150px);
+  display: block;
+  object-fit: contain;
+  background: #020617;
+}
+
+.source-preview-state {
+  padding: 30px;
+  color: #fff;
+  text-align: center;
+  font-size: 16px;
 }
 
 @media (max-width: 900px) {
   .content {
     padding: 22px 18px;
+  }
+
+  .parking-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-parking-btn {
+    width: 100%;
   }
 
   .page-top {

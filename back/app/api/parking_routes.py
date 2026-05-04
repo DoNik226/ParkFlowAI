@@ -6,10 +6,13 @@ import tempfile
 from typing import Annotated, Any
 
 import cv2
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+from back.app.core.security import decode_access_token
+from back.app.repositories.user_repository import UserRepository
 
 from back.app.api.deps import (
     assert_same_company_or_super_admin,
@@ -978,6 +981,141 @@ def get_snapshot(
 
     return FileResponse(parking.screenshot_file_path)
 
+def get_user_from_query_token(token: str, db: Session) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+    )
+
+    try:
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+
+        if user_id is None:
+            raise credentials_exception
+
+        user = UserRepository(db).get_by_id(int(user_id))
+    except Exception:
+        raise credentials_exception
+
+    if user is None or not user.is_active:
+        raise credentials_exception
+
+    return user
+
+
+def get_source_camera_or_404(db: Session, parking):
+    camera = CameraRepository(db).get_first_by_parking(parking.id)
+
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+
+    return camera
+
+
+def guess_video_media_type(path: str | Path) -> str:
+    suffix = Path(path).suffix.lower()
+
+    if suffix == ".webm":
+        return "video/webm"
+
+    if suffix == ".mov":
+        return "video/quicktime"
+
+    if suffix == ".avi":
+        return "video/x-msvideo"
+
+    if suffix == ".mkv":
+        return "video/x-matroska"
+
+    return "video/mp4"
+
+
+@router.get("/parkings/{parking_id}/source-video/view")
+def view_source_video(
+    parking_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    token: str = Query(...),
+):
+    current_user = get_user_from_query_token(token, db)
+    parking = resolve_parking(parking_id, db, current_user)
+    camera = get_source_camera_or_404(db, parking)
+
+    if camera.source_type != CameraSourceType.VIDEO.value:
+        raise HTTPException(status_code=400, detail="Parking source is not video")
+
+    if not camera.test_video_path:
+        raise HTTPException(status_code=404, detail="Video file is not configured")
+
+    video_path = Path(camera.test_video_path)
+
+    if not video_path.exists() or not video_path.is_file():
+        raise HTTPException(status_code=404, detail="Video file not found")
+
+    return FileResponse(
+        str(video_path),
+        media_type=guess_video_media_type(video_path),
+        filename=video_path.name,
+    )
+
+
+def mjpeg_frame_generator(source: str):
+    cap, temp_source_path = open_video_capture_unicode_safe(source)
+
+    try:
+        if not cap.isOpened():
+            raise HTTPException(status_code=400, detail="Cannot open camera source")
+
+        while True:
+            ok, frame = cap.read()
+
+            if not ok or frame is None:
+                break
+
+            ok, encoded = cv2.imencode(".jpg", frame)
+
+            if not ok:
+                continue
+
+            frame_bytes = encoded.tobytes()
+
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n"
+                b"Cache-Control: no-cache\r\n\r\n"
+                + frame_bytes
+                + b"\r\n"
+            )
+    finally:
+        cap.release()
+
+        if temp_source_path is not None:
+            try:
+                Path(temp_source_path).unlink(missing_ok=True)
+            except Exception:
+                pass
+
+
+@router.get("/parkings/{parking_id}/camera-stream.mjpg")
+def view_camera_stream(
+    parking_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    token: str = Query(...),
+):
+    current_user = get_user_from_query_token(token, db)
+    parking = resolve_parking(parking_id, db, current_user)
+    camera = get_source_camera_or_404(db, parking)
+
+    if camera.source_type != CameraSourceType.RTSP.value:
+        raise HTTPException(status_code=400, detail="Parking source is not RTSP stream")
+
+    if not camera.source_url:
+        raise HTTPException(status_code=404, detail="RTSP URL is not configured")
+
+    return StreamingResponse(
+        mjpeg_frame_generator(camera.source_url),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+    )
 
 @router.get("/parkings/{parking_id}/debug-frame")
 def get_debug_frame(

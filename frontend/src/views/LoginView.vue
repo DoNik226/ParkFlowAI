@@ -138,7 +138,7 @@ export default {
       try {
         await authService.forgotPassword(this.form.username)
         // Показываем зеленое сообщение об успехе
-        this.successMessage = 'Заявка отправлена администратору'
+        this.successMessage = 'С кем не бывало 😁'
         
         // Опционально: очистить сообщение через 5 секунд
         setTimeout(() => {

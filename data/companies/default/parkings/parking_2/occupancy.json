@@ -1,7 +1,7 @@
 {
   "parking_id": "parking_2",
-  "parking_name": "Парковка 2",
-  "camera_id": 3,
+  "parking_name": "Парковка у белого дома",
+  "camera_id": 2,
   "frame_index": 0,
   "timestamp_sec": 0.0,
   "summary": {

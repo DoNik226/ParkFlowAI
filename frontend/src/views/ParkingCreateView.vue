@@ -32,11 +32,11 @@
         </label>
 
         <label>
-          <span>Описание</span>
+          <span>Адрес парковки</span>
           <input
             v-model="form.description"
             type="text"
-            placeholder="Необязательно"
+            placeholder="ул. Набережная д. 11"
           >
         </label>
 

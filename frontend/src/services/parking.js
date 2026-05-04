@@ -81,17 +81,32 @@ export const parkingService = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-      }
+      },
     )
 
     return response.data
   },
 
-async deleteSourceVideo(parkingId) {
-  const response = await apiClient.delete(`/parkings/${parkingId}/source-video`)
-  return response.data
-},
+  async deleteSourceVideo(parkingId) {
+    const response = await apiClient.delete(`/parkings/${parkingId}/source-video`)
+    return response.data
+  },
 
+  getSourceVideoUrl(parkingId) {
+    const baseUrl = apiClient.defaults.baseURL || ''
+    const token = localStorage.getItem('access_token') || ''
+    const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+
+    return `${normalizedBaseUrl}/parkings/${parkingId}/source-video/view?token=${encodeURIComponent(token)}`
+  },
+
+  getCameraStreamUrl(parkingId) {
+    const baseUrl = apiClient.defaults.baseURL || ''
+    const token = localStorage.getItem('access_token') || ''
+    const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+
+    return `${normalizedBaseUrl}/parkings/${parkingId}/camera-stream.mjpg?token=${encodeURIComponent(token)}`
+  },
 
   async uploadSnapshot(parkingId, file) {
     const formData = new FormData()
@@ -104,7 +119,7 @@ async deleteSourceVideo(parkingId) {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-      }
+      },
     )
 
     return response.data

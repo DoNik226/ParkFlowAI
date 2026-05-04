@@ -1,17 +1,17 @@
 {
   "parking": {
     "id": "parking_2",
-    "name": "Парковка 2",
-    "db_id": 3,
+    "name": "Парковка у белого дома",
+    "db_id": 2,
     "company_id": 1
   },
   "camera": {
-    "id": 3,
-    "name": "Камера 2",
+    "id": 2,
+    "name": "camera_2",
     "parking_id": "parking_2",
     "source_url": null,
     "source_type": "video",
-    "parking_db_id": 3,
+    "parking_db_id": 2,
     "test_video_path": null
   },
   "calibration": null,
