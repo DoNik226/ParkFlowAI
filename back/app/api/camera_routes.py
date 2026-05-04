@@ -3,9 +3,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from back.app.api.deps import get_current_active_user, require_admin, assert_same_company_or_super_admin
+from back.app.api.deps import (
+    assert_same_company_or_super_admin,
+    get_audit_logger,
+    get_current_active_user,
+    require_admin,
+)
 from back.app.database import get_db
-from back.app.models.enums import CameraSourceType, CameraStatus
+from back.app.logger import AuditLogger
+from back.app.models.enums import CameraSourceType, CameraStatus, EventEntityType
 from back.app.models.user import User
 from back.app.repositories.camera_repository import CameraRepository
 from back.app.repositories.parking_repository import ParkingRepository
@@ -81,6 +87,7 @@ def create_camera(
     data: CameraCreate,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     camera_repo = CameraRepository(db)
     parking_repo = ParkingRepository(db)
@@ -99,7 +106,7 @@ def create_camera(
     }:
         raise HTTPException(status_code=400, detail="Invalid source_type")
 
-    return camera_repo.create(
+    camera = camera_repo.create(
         parking_id=parking.id,
         name=data.name,
         source_type=data.source_type,
@@ -107,6 +114,19 @@ def create_camera(
         status=CameraStatus.OFFLINE.value,
         is_active=True,
     )
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор создал камеру",
+        entity_type=EventEntityType.CAMERA.value,
+        entity_id=camera.id,
+        parking_id=parking.id,
+        details={
+            "camera_name": camera.name,
+            "source_type": camera.source_type,
+            "source_url": camera.source_url,
+        },
+    )
+    return camera
 
 
 @router.put("/{camera_id}", response_model=CameraResponse)
@@ -115,9 +135,10 @@ def update_camera(
     data: CameraUpdate,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     camera_repo = CameraRepository(db)
-    camera, _parking = resolve_camera(camera_id, db, current_user)
+    camera, parking = resolve_camera(camera_id, db, current_user)
 
     update_data = data.model_dump(exclude_unset=True)
 
@@ -128,7 +149,22 @@ def update_camera(
     }:
         raise HTTPException(status_code=400, detail="Invalid source_type")
 
-    return camera_repo.update(camera.id, **update_data)
+    updated = camera_repo.update(camera.id, **update_data)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор обновил камеру",
+        entity_type=EventEntityType.CAMERA.value,
+        entity_id=updated.id,
+        parking_id=parking.id,
+        details={
+            "camera_name": updated.name,
+            "updated_fields": sorted(update_data.keys()),
+            "source_type": updated.source_type,
+            "is_active": updated.is_active,
+            "status": updated.status,
+        },
+    )
+    return updated
 
 
 @router.delete("/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -136,9 +172,21 @@ def delete_camera(
     camera_id: int,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     camera_repo = CameraRepository(db)
-    camera, _parking = resolve_camera(camera_id, db, current_user)
+    camera, parking = resolve_camera(camera_id, db, current_user)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор удалил камеру",
+        entity_type=EventEntityType.CAMERA.value,
+        entity_id=camera.id,
+        parking_id=parking.id,
+        details={
+            "camera_name": camera.name,
+            "source_type": camera.source_type,
+        },
+    )
     camera_repo.delete(camera.id)
 
 
@@ -147,8 +195,20 @@ def reconnect_camera(
     camera_id: int,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
-    camera, _parking = resolve_camera(camera_id, db, current_user)
+    camera, parking = resolve_camera(camera_id, db, current_user)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор запросил переподключение камеры",
+        entity_type=EventEntityType.CAMERA.value,
+        entity_id=camera.id,
+        parking_id=parking.id,
+        details={
+            "camera_name": camera.name,
+            "source_type": camera.source_type,
+        },
+    )
 
     return {
         "camera_id": camera.id,

@@ -1,6 +1,11 @@
 import apiClient from './api-client'
 
 export const adminService = {
+  async getLogs(params = {}) {
+    const response = await apiClient.get('/logs', { params })
+    return response.data
+  },
+
   async getUsers() {
     const response = await apiClient.get('/users')
     return response.data

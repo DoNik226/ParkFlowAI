@@ -22,10 +22,17 @@ function getUserHomePath() {
   return isMobile() ? '/m' : '/main'
 }
 
+function clearStoredAuth() {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('user_role')
+  localStorage.removeItem('user_id')
+  localStorage.removeItem('username')
+}
+
 const routes = [
   {
     path: '/',
-    redirect: () => getUserHomePath(),
+    redirect: '/login',
   },
   {
     path: '/login',
@@ -118,15 +125,15 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
+  if (to.path === '/login') {
+    clearStoredAuth()
+  }
+
   const token = localStorage.getItem('access_token')
   const role = localStorage.getItem('user_role')
 
   if (!token && to.path !== '/login') {
     return '/login'
-  }
-
-  if (token && to.path === '/login') {
-    return role === 'admin' ? '/admin' : getUserHomePath()
   }
 
   if (to.meta.role && to.meta.role !== role) {

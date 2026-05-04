@@ -10,6 +10,14 @@ import traceback
 
 import cv2
 
+from back.app.database import SessionLocal
+from back.app.logger import EventLogger
+from back.app.models.enums import CameraSourceType, CameraStatus
+from back.app.repositories.camera_repository import CameraRepository
+from back.app.repositories.event_log_repository import EventLogRepository
+from back.app.repositories.parking_repository import ParkingRepository
+from back.app.repositories.user_repository import UserRepository
+from back.app.services.event_service import EventService
 from back.app.services.detect_parking import (
     load_layout,
     load_model,
@@ -66,6 +74,22 @@ def load_json_if_exists(path: str):
         return None
 
     return read_json(Path(path), default=None)
+
+
+def build_event_logger(db):
+    return EventLogger(
+        EventService(
+            event_log_repository=EventLogRepository(db),
+            user_repository=UserRepository(db),
+            camera_repository=CameraRepository(db),
+            parking_repository=ParkingRepository(db),
+        )
+    )
+
+
+def is_connection_error_message(message: str) -> bool:
+    lowered = (message or "").lower()
+    return "cannot open source" in lowered or "cannot read frame" in lowered
 
 def normalize_layout_for_detector(layout: dict) -> dict:
     """
@@ -212,6 +236,7 @@ class ParkingDetectorRuntime:
         self.last_processed_time = 0.0
         self.frame_index = -1
         self.fps = 25.0
+        self.last_error_message = None
 
     def close(self):
         if self.capture is not None:
@@ -323,12 +348,96 @@ class ParkingDetectorRuntime:
         control["last_processed_at"] = datetime.now(timezone.utc).isoformat()
         control["last_changed"] = changed
         write_json(self.control_path, control)
+        self.last_error_message = None
+        self._mark_camera_online()
 
     def mark_error(self, error: Exception):
+        message = str(error)
         control = read_json(self.control_path, default={}) or {}
-        control["last_error"] = str(error)
+        control["last_error"] = message
         control["last_processed_at"] = datetime.now(timezone.utc).isoformat()
         write_json(self.control_path, control)
+        if message != self.last_error_message:
+            self._persist_error_event(message)
+            self.last_error_message = message
+
+    def _mark_camera_online(self):
+        camera_id = self.config.get("camera_id")
+        parking_id = self.config.get("parking_db_id")
+        source_type = self.config.get("source_type")
+
+        if camera_id is None:
+            return
+
+        db = SessionLocal()
+        try:
+            camera_repo = CameraRepository(db)
+            camera = camera_repo.get_by_id(int(camera_id))
+            if not camera:
+                return
+
+            previous_status = camera.status
+            if previous_status != CameraStatus.ONLINE.value:
+                camera_repo.update(camera.id, status=CameraStatus.ONLINE.value)
+                if source_type == CameraSourceType.RTSP.value:
+                    build_event_logger(db).log_camera_connected(
+                        camera.id,
+                        parking_id=int(parking_id) if parking_id is not None else None,
+                        restored=previous_status == CameraStatus.ERROR.value,
+                    )
+        finally:
+            db.close()
+
+    def _persist_error_event(self, message: str):
+        camera_id = self.config.get("camera_id")
+        parking_id = self.config.get("parking_db_id")
+        source_type = self.config.get("source_type")
+
+        db = SessionLocal()
+        try:
+            logger = build_event_logger(db)
+            camera = None
+            previous_status = None
+            if camera_id is not None:
+                camera = CameraRepository(db).get_by_id(int(camera_id))
+                previous_status = camera.status if camera else None
+
+            is_connection_error = is_connection_error_message(message)
+            if camera and camera.status != CameraStatus.ERROR.value:
+                CameraRepository(db).update(camera.id, status=CameraStatus.ERROR.value)
+
+            details = {
+                "message": message,
+                "parking_id": parking_id,
+                "camera_id": camera_id,
+                "source_type": source_type,
+                "source": self.config.get("source"),
+            }
+
+            if is_connection_error and camera_id is not None and source_type == CameraSourceType.RTSP.value:
+                if previous_status == CameraStatus.ONLINE.value:
+                    logger.log_camera_connection_lost(
+                        int(camera_id),
+                        parking_id=int(parking_id) if parking_id is not None else None,
+                        details=details,
+                    )
+                else:
+                    logger.log_video_processing_error(
+                        camera_id=int(camera_id),
+                        parking_id=int(parking_id) if parking_id is not None else None,
+                        description="Ошибка доступа к видеопотоку камеры",
+                        details=details,
+                    )
+                return
+
+            logger.log_detection_error(
+                camera_id=int(camera_id) if camera_id is not None else None,
+                parking_id=int(parking_id) if parking_id is not None else None,
+                description="Ошибка детекции парковки",
+                details=details,
+            )
+        finally:
+            db.close()
 
 
 def main():

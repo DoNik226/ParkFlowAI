@@ -11,8 +11,14 @@ from fastapi.responses import FileResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from back.app.api.deps import get_current_active_user, require_admin, assert_same_company_or_super_admin
+from back.app.api.deps import (
+    assert_same_company_or_super_admin,
+    get_audit_logger,
+    get_current_active_user,
+    require_admin,
+)
 from back.app.database import get_db
+from back.app.logger import AuditLogger
 from back.app.models.enums import UserRole, CameraSourceType, CameraStatus
 from back.app.models.user import User
 from back.app.repositories.camera_repository import CameraRepository
@@ -307,6 +313,7 @@ def create_parking(
     data: ParkingCreate,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking_repo = ParkingRepository(db)
     camera_repo = CameraRepository(db)
@@ -376,7 +383,20 @@ def create_parking(
     storage.save_layout_to_db(parking, initial_layout)
     storage.write_runtime_json_files(parking, parking.layout_file_path, parking.occupancy_file_path)
 
-    return summarize_parking(db, parking)
+    result = summarize_parking(db, parking)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор создал парковку",
+        parking_id=parking.id,
+        details={
+            "parking_slug": parking.slug,
+            "parking_name": parking.name,
+            "camera_id": camera.id,
+            "camera_name": camera.name,
+            "source_type": camera.source_type,
+        },
+    )
+    return result
 
 
 @router.get("/parkings/{parking_id}", response_model=ParkingResponse)
@@ -395,6 +415,7 @@ def update_parking(
     data: ParkingUpdate,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     repo = ParkingRepository(db)
     parking = resolve_parking(parking_id, db, current_user)
@@ -408,6 +429,16 @@ def update_parking(
         update_data["slug"] = new_slug
 
     updated = repo.update(parking.id, **update_data)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор обновил парковку",
+        parking_id=updated.id,
+        details={
+            "parking_slug": updated.slug,
+            "parking_name": updated.name,
+            "updated_fields": sorted(update_data.keys()),
+        },
+    )
 
     return summarize_parking(db, updated)
 
@@ -417,9 +448,15 @@ def delete_parking(
     parking_id: str,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
     parking_db_id = int(parking.id)
+    deleted_parking_details = {
+        "parking_id": parking_db_id,
+        "parking_slug": parking.slug,
+        "parking_name": parking.name,
+    }
     base = parking_storage_dir(db, parking)
 
     # Удаляем явно, а не только через ORM/cascade.
@@ -481,6 +518,12 @@ def delete_parking(
     if base.exists():
         import shutil
         shutil.rmtree(base)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор удалил парковку",
+        parking_id=parking_db_id,
+        details=deleted_parking_details,
+    )
 
 
 @router.get("/parkings/{parking_id}/layout")
@@ -499,6 +542,7 @@ def save_layout(
     data: ParkingLayoutSave,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
 
@@ -537,6 +581,17 @@ def save_layout(
     storage = ParkingLayoutStorageService(db)
     storage.save_layout_to_db(parking, layout)
     storage.write_runtime_json_files(parking, parking.layout_file_path, parking.occupancy_file_path)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор сохранил разметку парковки",
+        parking_id=parking.id,
+        details={
+            "parking_slug": parking.slug,
+            "zones_count": len(layout.get("zones", [])),
+            "spots_count": len(layout.get("spots", [])),
+            "camera_id": camera.id if camera else None,
+        },
+    )
 
     return {
         "status": "ok",
@@ -560,6 +615,7 @@ def save_map(
     data: ParkingMapSave,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
 
@@ -576,6 +632,17 @@ def save_map(
 
     if parking.map_file_path:
         write_json(parking.map_file_path, storage.build_map_from_db(parking))
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор сохранил карту парковки",
+        parking_id=parking.id,
+        details={
+            "parking_slug": parking.slug,
+            "roads_count": len(map_data.get("roads", [])),
+            "entrances_count": len(map_data.get("entrances", [])),
+            "labels_count": len(map_data.get("labels", [])),
+        },
+    )
 
     return {
         "status": "ok",
@@ -667,6 +734,7 @@ async def upload_source_video(
     parking_id: str,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
     file: UploadFile = File(...),
 ):
     parking = resolve_parking(parking_id, db, current_user)
@@ -700,6 +768,17 @@ async def upload_source_video(
             test_video_path=str(target),
             source_url=None,
         )
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор загрузил тестовое видео",
+        parking_id=parking.id,
+        details={
+            "parking_slug": parking.slug,
+            "camera_id": camera.id if camera else None,
+            "filename": file.filename,
+            "test_video_path": str(target),
+        },
+    )
 
     return {
         "status": "ok",
@@ -712,6 +791,7 @@ def delete_source_video(
     parking_id: str,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
     camera_repo = CameraRepository(db)
@@ -765,6 +845,16 @@ def delete_source_video(
         update_data["source_type"] = CameraSourceType.VIDEO.value
 
     camera_repo.update(camera.id, **update_data)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор удалил тестовое видео",
+        parking_id=parking.id,
+        details={
+            "parking_slug": parking.slug,
+            "camera_id": camera.id,
+            "deleted_files": deleted_files,
+        },
+    )
 
     return {
         "status": "ok",
@@ -778,6 +868,7 @@ async def upload_snapshot(
     parking_id: str,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
     file: UploadFile = File(...),
 ):
     parking = resolve_parking(parking_id, db, current_user)
@@ -795,6 +886,16 @@ async def upload_snapshot(
 
     repo = ParkingRepository(db)
     repo.update(parking.id, screenshot_file_path=str(target))
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор загрузил snapshot парковки",
+        parking_id=parking.id,
+        details={
+            "parking_slug": parking.slug,
+            "filename": file.filename,
+            "screenshot_file_path": str(target),
+        },
+    )
 
     return {
         "status": "ok",
@@ -807,6 +908,7 @@ def capture_snapshot(
     parking_id: str,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
     camera_repo = CameraRepository(db)
@@ -838,6 +940,17 @@ def capture_snapshot(
         parking_repo.update(parking.id, screenshot_file_path=str(target))
 
         camera_repo.update(camera.id, last_snapshot_path=str(target), status=CameraStatus.ONLINE.value)
+        audit_logger.log_admin_action(
+            current_user.id,
+            "Администратор сохранил snapshot с камеры",
+            parking_id=parking.id,
+            details={
+                "parking_slug": parking.slug,
+                "camera_id": camera.id,
+                "camera_name": camera.name,
+                "screenshot_file_path": str(target),
+            },
+        )
 
         return {
             "status": "ok",

@@ -5,8 +5,14 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from back.app.api.deps import get_current_active_user, require_admin, assert_same_company_or_super_admin
+from back.app.api.deps import (
+    assert_same_company_or_super_admin,
+    get_audit_logger,
+    get_current_active_user,
+    require_admin,
+)
 from back.app.database import get_db
+from back.app.logger import AuditLogger
 from back.app.models.enums import CameraSourceType, UserRole
 from back.app.models.user import User
 from back.app.repositories.camera_repository import CameraRepository
@@ -142,6 +148,7 @@ def build_detector_config(db: Session, parking, active: bool) -> dict:
     return {
         "parking_id": parking.slug,
         "parking_db_id": parking.id,
+        "camera_id": camera.id,
         "company_id": parking.company_id,
         "active": active,
         "source_type": source_type,
@@ -192,11 +199,23 @@ def start_detector(
     parking_id: str,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
     config = build_detector_config(db, parking, active=True)
 
     write_json(detector_control_path(db, parking), config)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор запустил детекцию",
+        parking_id=parking.id,
+        details={
+            "parking_slug": parking.slug,
+            "camera_id": config["camera_id"],
+            "source_type": config["source_type"],
+            "source": config["source"],
+        },
+    )
 
     return {
         "status": "started",
@@ -210,6 +229,7 @@ def stop_detector(
     parking_id: str,
     current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
     control_file = detector_control_path(db, parking)
@@ -218,6 +238,16 @@ def stop_detector(
     control["active"] = False
 
     write_json(control_file, control)
+    audit_logger.log_admin_action(
+        current_user.id,
+        "Администратор остановил детекцию",
+        parking_id=parking.id,
+        details={
+            "parking_slug": parking.slug,
+            "camera_id": control.get("camera_id"),
+            "source_type": control.get("source_type"),
+        },
+    )
 
     return {
         "status": "stopped",

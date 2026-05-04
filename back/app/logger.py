@@ -59,6 +59,76 @@ class EventLogger:
             description="Приложение остановлено",
         )
 
+    def log_camera_connected(self, camera_id: int, *, parking_id: int | None = None, restored: bool = False) -> None:
+        self.log(
+            event_type=(
+                EventType.CAMERA_CONNECTION_RESTORED.value
+                if restored
+                else EventType.CAMERA_CONNECTED.value
+            ),
+            description=(
+                "Соединение с камерой восстановлено"
+                if restored
+                else "Камера подключена"
+            ),
+            entity_type=EventEntityType.CAMERA.value,
+            entity_id=camera_id,
+            parking_id=parking_id,
+        )
+
+    def log_camera_connection_lost(
+        self,
+        camera_id: int,
+        *,
+        parking_id: int | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        self.log(
+            event_type=EventType.CAMERA_CONNECTION_LOST.value,
+            description="Потеряно соединение с камерой",
+            severity=EventSeverity.ERROR.value,
+            entity_type=EventEntityType.CAMERA.value,
+            entity_id=camera_id,
+            parking_id=parking_id,
+            details=details,
+        )
+
+    def log_detection_error(
+        self,
+        *,
+        camera_id: int | None = None,
+        parking_id: int | None = None,
+        description: str = "Ошибка детекции",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        self.log(
+            event_type=EventType.DETECTION_ERROR.value,
+            description=description,
+            severity=EventSeverity.ERROR.value,
+            entity_type=EventEntityType.CAMERA.value if camera_id is not None else EventEntityType.SYSTEM.value,
+            entity_id=camera_id,
+            parking_id=parking_id,
+            details=details,
+        )
+
+    def log_video_processing_error(
+        self,
+        *,
+        camera_id: int | None = None,
+        parking_id: int | None = None,
+        description: str = "Ошибка обработки видео",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        self.log(
+            event_type=EventType.VIDEO_PROCESSING_ERROR.value,
+            description=description,
+            severity=EventSeverity.ERROR.value,
+            entity_type=EventEntityType.CAMERA.value if camera_id is not None else EventEntityType.SYSTEM.value,
+            entity_id=camera_id,
+            parking_id=parking_id,
+            details=details,
+        )
+
 
 class AuditLogger(EventLogger):
     def log_user_login(self, user_id: int, *, entity_type: str) -> None:

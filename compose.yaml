@@ -6,12 +6,24 @@ services:
       context: .
       dockerfile: detector/Dockerfile
     image: parkflowai-detector
+    environment:
+      DATABASE_URL: postgresql://parkflow:parkflow@db:5432/parking_db
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: parking_db
+      DB_USER: parkflow
+      DB_PASSWORD: parkflow
+      SECRET_KEY: change-me-in-production
+      ALGORITHM: HS256
     volumes:
       - ./data:/app/data
       - ./models:/app/models
       - ./back:/app/back
     depends_on:
-      - backend
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
     restart: unless-stopped  
   db:
     image: postgres:16-alpine
@@ -59,6 +71,15 @@ services:
     build:
       context: .
       dockerfile: back/Dockerfile.detector
+    environment:
+      DATABASE_URL: postgresql://parkflow:parkflow@db:5432/parking_db
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: parking_db
+      DB_USER: parkflow
+      DB_PASSWORD: parkflow
+      SECRET_KEY: change-me-in-production
+      ALGORITHM: HS256
     volumes:
       - ./data:/app/data
       - ./models:/app/models
@@ -74,7 +95,10 @@ services:
       --save-json /app/data/parkings/parking_a/occupancy.json
       --save-frame /app/data/parkings/parking_a/debug_detection.jpg
     depends_on:
-      - backend
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
     restart: unless-stopped
 
   frontend:

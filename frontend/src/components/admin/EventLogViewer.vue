@@ -173,6 +173,24 @@
           </thead>
 
           <tbody>
+            <tr v-if="isLoading">
+              <td :colspan="selectedObject === 'camera' ? 4 : 3">
+                Загрузка журнала событий...
+              </td>
+            </tr>
+
+            <tr v-else-if="loadError">
+              <td :colspan="selectedObject === 'camera' ? 4 : 3">
+                {{ loadError }}
+              </td>
+            </tr>
+
+            <tr v-else-if="!filteredData.length">
+              <td :colspan="selectedObject === 'camera' ? 4 : 3">
+                События не найдены
+              </td>
+            </tr>
+
             <tr v-for="(item, i) in filteredData" :key="i">
               <td>{{ item.objectName }}</td>
 
@@ -194,17 +212,11 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
-const logs = ref([
-  { type: 'user', objectName: 'ivan', date: '2026-04-14 10:00', description: 'Вход в приложение' },
-  { type: 'admin', objectName: 'admin1', date: '2026-04-14 11:00', description: 'Удаление пользователя: petr' },
-  {
-    type: 'camera',
-    objectName: 'CAM-01',
-    parkingName: 'P1',
-    date: '2026-04-14 12:00',
-    description: 'Переподключение'
-  }
-])
+import adminService from '@/services/admin'
+
+const logs = ref([])
+const isLoading = ref(false)
+const loadError = ref('')
 
 const rootRef = ref(null)
 
@@ -266,8 +278,60 @@ const handleClickOutside = (e) => {
   }
 }
 
+function formatTimestamp(value) {
+  if (!value) return '-'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+
+  const pad = (num) => String(num).padStart(2, '0')
+
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join('-') + ' ' + [
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+  ].join(':')
+}
+
+function mapLogEntry(item) {
+  const objectName =
+    item.entity_name ||
+    item.actor_username ||
+    (item.entity_type === 'system' ? 'Система' : `#${item.entity_id ?? '-'}`)
+
+  return {
+    id: item.id,
+    type: item.entity_type,
+    objectName,
+    parkingName: item.parking_name || '',
+    date: formatTimestamp(item.timestamp),
+    description: item.description,
+    raw: item,
+  }
+}
+
+async function loadLogs() {
+  isLoading.value = true
+  loadError.value = ''
+
+  try {
+    const response = await adminService.getLogs({ limit: 200 })
+    logs.value = (response.logs || []).map(mapLogEntry)
+  } catch (error) {
+    console.error('Не удалось загрузить журнал событий:', error)
+    loadError.value = 'Не удалось загрузить журнал событий'
+    logs.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  loadLogs()
 })
 
 onBeforeUnmount(() => {

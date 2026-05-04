@@ -164,12 +164,12 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="center-button">
-          <button class="add-parking-btn" @click="createParking">
-            Добавить парковку
-          </button>
-        </div>
+      <div v-if="!isLoading && !errorMessage" class="center-button">
+        <button class="add-parking-btn" @click="createParking">
+          Добавить парковку
+        </button>
       </div>
     </div>
   </section>

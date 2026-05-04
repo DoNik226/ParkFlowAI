@@ -1,0 +1,17 @@
+{
+  "parking_id": "egor_parking",
+  "parking_name": "Егорова парковка",
+  "camera_id": 2,
+  "frame_index": 0,
+  "timestamp_sec": 0.0,
+  "summary": {
+    "total": 0,
+    "occupied": 0,
+    "free": 0,
+    "unknown": 0
+  },
+  "params": {},
+  "spots": [],
+  "source_type": null,
+  "source_path": null
+}

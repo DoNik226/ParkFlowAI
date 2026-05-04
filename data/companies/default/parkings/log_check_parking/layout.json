@@ -1,0 +1,25 @@
+{
+  "parking": {
+    "id": "log_check_parking",
+    "name": "Log Check Parking",
+    "db_id": 4,
+    "company_id": 1
+  },
+  "camera": {
+    "id": 4,
+    "name": "Log Check Camera",
+    "parking_id": "log_check_parking",
+    "source_url": "rtsp://127.0.0.1:8554/unavailable",
+    "source_type": "rtsp",
+    "parking_db_id": 4,
+    "test_video_path": null
+  },
+  "calibration": null,
+  "zones": [],
+  "spots": [],
+  "vertices": [],
+  "road_vertices": [],
+  "edges": [],
+  "road_edges": [],
+  "entrances": []
+}
