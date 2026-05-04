@@ -45,7 +45,7 @@
 
         <button class="admin-item" @click="goEvents">
           <div class="admin-card">
-            <img src="../assets/img/save.png" alt="Журнал событий">
+            <img src="../assets/img/file.png" alt="Журнал событий">
           </div>
           <span class="admin-label">Журнал событий</span>
         </button>
