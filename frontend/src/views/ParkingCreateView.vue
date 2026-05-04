@@ -6,9 +6,9 @@
         <p>Создание парковки и первичного источника камеры</p>
       </div>
 
-      <button class="secondary-btn" @click="goBack">
+      <!-- <button class="secondary-btn" @click="goBack">
         Назад
-      </button>
+      </button> -->
     </div>
 
     <div class="card">

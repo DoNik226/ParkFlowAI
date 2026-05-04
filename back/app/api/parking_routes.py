@@ -707,6 +707,71 @@ async def upload_source_video(
         "stored_copy_path": str(legacy_target),
     }
 
+@router.delete("/parkings/{parking_id}/source-video")
+def delete_source_video(
+    parking_id: str,
+    current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    parking = resolve_parking(parking_id, db, current_user)
+    camera_repo = CameraRepository(db)
+    camera = camera_repo.get_first_by_parking(parking.id)
+
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+
+    deleted_files = []
+
+    # Удаляем основной runtime-файл видео
+    if camera.test_video_path:
+        video_path = Path(camera.test_video_path)
+
+        if video_path.exists() and video_path.is_file():
+            video_path.unlink()
+            deleted_files.append(str(video_path))
+
+    # Удаляем копии test_video.* в папке парковки/source
+    base = parking_storage_dir(db, parking)
+    source_dir = base / "source"
+
+    if source_dir.exists():
+        for file_path in source_dir.glob("test_video.*"):
+            if file_path.is_file():
+                file_path.unlink()
+                deleted_files.append(str(file_path))
+
+    # Останавливаем detector, если он был запущен
+    control_file = base / "detector_control.json"
+    if control_file.exists():
+        try:
+            control = read_json(control_file, default={}) or {}
+            control["active"] = False
+            control["last_error"] = "Test video was deleted"
+            write_json(control_file, control)
+        except Exception:
+            pass
+
+    # Очищаем видео у камеры
+    update_data = {
+        "test_video_path": None,
+    }
+
+    # Если RTSP URL есть — возвращаем источник на RTSP
+    if camera.source_url:
+        update_data["source_type"] = CameraSourceType.RTSP.value
+    else:
+        # Если RTSP нет, оставляем тип video, но без файла.
+        # Frontend покажет "не активно".
+        update_data["source_type"] = CameraSourceType.VIDEO.value
+
+    camera_repo.update(camera.id, **update_data)
+
+    return {
+        "status": "ok",
+        "parking_id": parking.slug,
+        "deleted_files": deleted_files,
+    }
+
 
 @router.post("/parkings/{parking_id}/snapshot/upload")
 async def upload_snapshot(

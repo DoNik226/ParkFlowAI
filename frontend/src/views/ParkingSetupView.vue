@@ -8,9 +8,9 @@
         </p>
       </div>
 
-      <button class="secondary-btn" @click="goBack">
+      <!-- <button class="secondary-btn" @click="goBack">
         Назад
-      </button>
+      </button> -->
     </div>
 
     <div v-if="loading" class="card">
@@ -29,6 +29,18 @@
           Для тестирования можно загрузить видео. Для реального подключения используется RTSP.
         </p>
 
+        <div class="source-info">
+          <div>
+            <span>Текущий источник</span>
+            <b>{{ sourceTypeLabel }}</b>
+          </div>
+
+          <div>
+            <span>Видео</span>
+            <b>{{ currentVideoName }}</b>
+          </div>
+        </div>
+
         <div class="upload-row">
           <input
             ref="videoInputRef"
@@ -46,8 +58,33 @@
           </button>
         </div>
 
+        <button
+          v-if="hasVideo"
+          class="danger-btn full"
+          :disabled="deletingVideo"
+          @click="deleteVideo"
+        >
+          {{ deletingVideo ? 'Удаление...' : 'Удалить тестовое видео' }}
+        </button>
+
         <div v-if="videoMessage" class="alert success">
           {{ videoMessage }}
+        </div>
+
+        <div class="editor-block">
+          <h3>Редакторы</h3>
+
+          <div class="editor-buttons">
+            <button class="editor-btn" @click="openLayoutEditor">
+              <span class="editor-btn-title">Редактор разметки мест</span>
+              <span class="editor-btn-subtitle">Настройка парковочных зон и мест</span>
+            </button>
+
+            <button class="editor-btn" @click="openMapEditor">
+              <span class="editor-btn-title">Конструктор цифровой карты</span>
+              <span class="editor-btn-subtitle">Въезды, граф дорог и маршруты</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -96,7 +133,7 @@
         </button>
       </div>
 
-      <div class="card">
+      <!-- <div class="card">
         <h2>Редакторы</h2>
 
         <div class="editor-actions">
@@ -112,24 +149,24 @@
             Открыть пользовательскую карту
           </button>
         </div>
-      </div>
+      </div> -->
 
-      <div class="card">
+      <!-- <div class="card">
         <h2>Состояние</h2>
 
         <div class="info-list">
           <div>
-            <span>Layout</span>
+            <span>Layout.json (Разметка)</span>
             <b>{{ parking?.layout_file_path ? 'создан' : 'нет' }}</b>
           </div>
 
           <div>
-            <span>Map</span>
+            <span>Карта</span>
             <b>{{ parking?.map_file_path ? 'создан' : 'нет' }}</b>
           </div>
 
           <div>
-            <span>Occupancy</span>
+            <span>Occupancy.json (Результат детекции)</span>
             <b>{{ parking?.occupancy_file_path ? 'создан' : 'нет' }}</b>
           </div>
 
@@ -143,13 +180,13 @@
             <b>{{ parking?.zones_count ?? 0 }}</b>
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
   </section>
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { parkingService } from '@/services/parking'
 
@@ -163,10 +200,14 @@ const error = ref('')
 
 const parking = ref(null)
 
+const videoInputRef = ref(null)
+const snapshotInputRef = ref(null)
+
 const videoFile = ref(null)
 const snapshotFile = ref(null)
 
 const uploadingVideo = ref(false)
+const deletingVideo = ref(false)
 const uploadingSnapshot = ref(false)
 const capturing = ref(false)
 
@@ -174,6 +215,77 @@ const videoMessage = ref('')
 const snapshotMessage = ref('')
 
 const snapshotUrl = ref('')
+
+const currentCamera = computed(() => {
+  if (!parking.value) {
+    return null
+  }
+
+  if (parking.value.camera) {
+    return parking.value.camera
+  }
+
+  if (Array.isArray(parking.value.cameras) && parking.value.cameras.length) {
+    return parking.value.cameras[0]
+  }
+
+  return {
+    source_type: parking.value.source_type,
+    source_url: parking.value.source_url,
+    test_video_path: parking.value.test_video_path,
+    name: parking.value.camera_name,
+  }
+})
+
+const currentVideoPath = computed(() => {
+  const camera = currentCamera.value
+
+  return (
+    camera?.test_video_path ||
+    camera?.video_path ||
+    camera?.source_path ||
+    parking.value?.test_video_path ||
+    ''
+  )
+})
+
+const hasVideo = computed(() => {
+  return Boolean(currentVideoPath.value)
+})
+
+const currentVideoName = computed(() => {
+  if (!currentVideoPath.value) {
+    return 'не загружено'
+  }
+
+  return getFileName(currentVideoPath.value)
+})
+
+const sourceTypeLabel = computed(() => {
+  const camera = currentCamera.value
+  const sourceType = String(camera?.source_type || parking.value?.source_type || '').toLowerCase()
+
+  if (sourceType === 'video' && hasVideo.value) {
+    return 'используется тестовое видео'
+  }
+
+  if (sourceType === 'video') {
+    return 'тестовое видео не загружено'
+  }
+
+  if (sourceType === 'rtsp') {
+    return camera?.source_url ? 'RTSP-поток' : 'RTSP не настроен'
+  }
+
+  return 'не настроен'
+})
+
+function getFileName(path) {
+  if (!path) return ''
+
+  const normalized = String(path).replaceAll('\\', '/')
+  return normalized.split('/').filter(Boolean).at(-1) || normalized
+}
 
 async function loadParking() {
   loading.value = true
@@ -193,11 +305,13 @@ async function loadParking() {
 function onVideoSelected(event) {
   videoFile.value = event.target.files?.[0] || null
   videoMessage.value = ''
+  error.value = ''
 }
 
 function onSnapshotSelected(event) {
   snapshotFile.value = event.target.files?.[0] || null
   snapshotMessage.value = ''
+  error.value = ''
 }
 
 async function uploadVideo() {
@@ -205,10 +319,17 @@ async function uploadVideo() {
 
   uploadingVideo.value = true
   videoMessage.value = ''
+  error.value = ''
 
   try {
     await parkingService.uploadSourceVideo(parkingId, videoFile.value)
     videoMessage.value = 'Тестовое видео загружено'
+    videoFile.value = null
+
+    if (videoInputRef.value) {
+      videoInputRef.value.value = ''
+    }
+
     parking.value = await parkingService.getParking(parkingId)
   } catch (err) {
     console.error('Ошибка загрузки видео:', err)
@@ -218,15 +339,49 @@ async function uploadVideo() {
   }
 }
 
+async function deleteVideo() {
+  const ok = window.confirm('Удалить загруженное тестовое видео?')
+
+  if (!ok) return
+
+  deletingVideo.value = true
+  videoMessage.value = ''
+  error.value = ''
+
+  try {
+    await parkingService.deleteSourceVideo(parkingId)
+    videoMessage.value = 'Тестовое видео удалено'
+    videoFile.value = null
+
+    if (videoInputRef.value) {
+      videoInputRef.value.value = ''
+    }
+
+    parking.value = await parkingService.getParking(parkingId)
+  } catch (err) {
+    console.error('Ошибка удаления видео:', err)
+    error.value = 'Не удалось удалить тестовое видео'
+  } finally {
+    deletingVideo.value = false
+  }
+}
+
 async function uploadSnapshot() {
   if (!snapshotFile.value) return
 
   uploadingSnapshot.value = true
   snapshotMessage.value = ''
+  error.value = ''
 
   try {
     await parkingService.uploadSnapshot(parkingId, snapshotFile.value)
     snapshotMessage.value = 'Скриншот загружен'
+    snapshotFile.value = null
+
+    if (snapshotInputRef.value) {
+      snapshotInputRef.value.value = ''
+    }
+
     parking.value = await parkingService.getParking(parkingId)
     await loadSnapshot()
   } catch (err) {
@@ -307,6 +462,66 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+
+.editor-block {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.editor-block h3 {
+  margin: 0 0 12px;
+  color: #1f2937;
+  font-size: 18px;
+}
+
+.editor-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.editor-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  background: #2d8fe3;
+  color: white;
+  cursor: pointer;
+  text-align: left;
+  min-height: 86px;
+  box-shadow: 0 8px 18px rgba(45, 143, 227, 0.22);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.editor-btn:hover {
+  background: #1f7fce;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(45, 143, 227, 0.28);
+}
+
+.editor-btn-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.editor-btn-subtitle {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.9;
+  line-height: 1.25;
+}
+
+@media (max-width: 900px) {
+  .editor-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
 .page {
   min-height: calc(100vh - 70px);
   padding: 28px;
@@ -349,6 +564,32 @@ onBeforeUnmount(() => {
   color: #1f2937;
 }
 
+.source-info {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.source-info div {
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.source-info span {
+  display: block;
+  margin-bottom: 5px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.source-info b {
+  color: #111827;
+  word-break: break-word;
+}
+
 .upload-row {
   display: flex;
   gap: 12px;
@@ -358,7 +599,8 @@ onBeforeUnmount(() => {
 }
 
 .primary-btn,
-.secondary-btn {
+.secondary-btn,
+.danger-btn {
   border: none;
   border-radius: 10px;
   padding: 11px 16px;
@@ -376,8 +618,14 @@ onBeforeUnmount(() => {
   color: #1f2937;
 }
 
+.danger-btn {
+  background: #ef4444;
+  color: #fff;
+}
+
 .primary-btn:disabled,
-.secondary-btn:disabled {
+.secondary-btn:disabled,
+.danger-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

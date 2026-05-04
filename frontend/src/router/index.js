@@ -129,7 +129,6 @@ router.beforeEach((to) => {
     return role === 'admin' ? '/admin' : getUserHomePath()
   }
 
-  // Обычный пользователь не должен попадать в админку
   if (to.meta.role && to.meta.role !== role) {
     return {
       path: getUserHomePath(),
@@ -137,8 +136,7 @@ router.beforeEach((to) => {
     }
   }
 
-  // Если обычный пользователь с телефона попал на desktop-страницу,
-  // переводим его на мобильную карту.
+  // Только обычный пользователь на телефоне переходит с desktop-карты на мобильную.
   if (token && role !== 'admin' && isMobile() && to.path === '/main') {
     return {
       path: '/m',
@@ -146,9 +144,16 @@ router.beforeEach((to) => {
     }
   }
 
-  // Если обычный пользователь с компьютера попал на мобильную страницу,
-  // переводим его на desktop-карту.
+  // Только обычный пользователь на компьютере переходит с мобильной карты на desktop.
   if (token && role !== 'admin' && !isMobile() && to.path === '/m') {
+    return {
+      path: '/main',
+      query: to.query,
+    }
+  }
+
+  // Администратор не должен пользоваться мобильной версией.
+  if (token && role === 'admin' && to.path === '/m') {
     return {
       path: '/main',
       query: to.query,

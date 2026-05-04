@@ -10,17 +10,6 @@
     </transition>
 
     <div class="content">
-      <div class="page-top">
-        <div class="page-title">
-          <h1>Парковки</h1>
-          <p>Список парковок, доступных текущему администратору</p>
-        </div>
-
-        <button class="secondary-btn" @click="loadParkings">
-          Обновить
-        </button>
-      </div>
-
       <div v-if="isLoading" class="loading-indicator">
         Загрузка данных...
       </div>
@@ -60,13 +49,13 @@
             </div>
 
             <div class="header-buttons">
-              <button class="map-btn" @click="openMap(parking.id)">
+              <!-- <button class="map-btn" @click="openMap(parking.id)">
                 Карта
               </button>
 
               <button class="settings-btn" @click="openSetup(parking.id)">
                 Настройка
-              </button>
+              </button> -->
 
               <button
                 class="collapse-btn"

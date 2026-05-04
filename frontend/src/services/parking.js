@@ -87,6 +87,12 @@ export const parkingService = {
     return response.data
   },
 
+async deleteSourceVideo(parkingId) {
+  const response = await apiClient.delete(`/parkings/${parkingId}/source-video`)
+  return response.data
+},
+
+
   async uploadSnapshot(parkingId, file) {
     const formData = new FormData()
     formData.append('file', file, file.name)

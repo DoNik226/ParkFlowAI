@@ -9,16 +9,32 @@
         {{ mapError }}
       </div>
 
-      <ParkingMap
+      <div
         v-else
-        :layout="layout"
-        :occupancy="occupancyState"
-        :map-data="mapData"
-        :route-path="routePath"
-        :selected-spot-id="selectedSpot?.id || null"
-        :selected-entrance-id="selectedEntranceVertexId"
-        @select-spot="selectSpot"
-      />
+        ref="mapViewportRef"
+        class="mobile-map-viewport"
+        @pointerdown="startMobileMapGesture"
+        @pointermove="moveMobileMapGesture"
+        @pointerup="endMobileMapGesture"
+        @pointercancel="endMobileMapGesture"
+        @pointerleave="endMobileMapGesture"
+      >
+        <div
+          class="mobile-map-pan-layer"
+          :class="{ panning: isMapPanning }"
+          :style="mobileMapTransformStyle"
+        >
+          <ParkingMap
+            :layout="layout"
+            :occupancy="occupancyState"
+            :map-data="mapData"
+            :route-path="routePath"
+            :selected-spot-id="selectedSpot?.id || null"
+            :selected-entrance-id="selectedEntranceVertexId"
+            @select-spot="selectSpot"
+          />
+        </div>
+      </div>
 
       <div class="load-bar">
         Загруженность: {{ occupancyPercent }}%
@@ -29,16 +45,16 @@
       </div>
     </div>
 
-    <div class="bottom-panel">
-      <button class="bottom-btn logout" title="Выйти" @click="openLogoutModal">
+    <div class="mobile-bottom-panel">
+      <button class="mobile-bottom-btn logout" title="Выйти" @click="openLogoutModal">
         <img src="../assets/img/sign-out-black.png" alt="Выйти">
       </button>
 
-      <button class="route-btn-mobile" @click="buildRouteForSelected">
+      <button class="mobile-route-btn" @click="buildRouteForSelected">
         Маршрут
       </button>
 
-      <button class="bottom-btn menu-btn" title="Меню" @click="openMenu">
+      <button class="mobile-bottom-btn mobile-menu-btn" title="Меню" @click="openMenu">
         ☰
       </button>
     </div>
@@ -118,7 +134,7 @@
             :key="spot.id"
             class="spot-btn"
             :class="{ active: selectedSpot?.id === spot.id }"
-            @click="selectSpot(spot)"
+            @click="selectSpotFromMenu(spot)"
           >
             <div class="spot-number">
               {{ getSpotTitle(spot) }}
@@ -185,7 +201,52 @@ const showParking = ref(false)
 const showEntrance = ref(false)
 const showLogoutModal = ref(false)
 
+const mapViewportRef = ref(null)
+
+const mapScale = ref(0.65)
+const minMapScale = 0.4
+const maxMapScale = 4
+
+const mapPan = ref({
+  x: 0,
+  y: 80,
+})
+
+const mapPanStart = ref({
+  x: 0,
+  y: 0,
+})
+
+const mapPanBeforeDrag = ref({
+  x: 0,
+  y: 0,
+})
+
+const activePointers = ref(new Map())
+const pinchStartDistance = ref(0)
+const pinchStartScale = ref(1)
+
+const pinchStartCenter = ref({
+  x: 0,
+  y: 0,
+})
+
+const pinchStartPan = ref({
+  x: 0,
+  y: 0,
+})
+
+const isMapPanning = ref(false)
+const suppressMapSelection = ref(false)
+
 let pollTimer = null
+
+const mobileMapTransformStyle = computed(() => {
+  return {
+    transform: `translate3d(${mapPan.value.x}px, ${mapPan.value.y}px, 0) scale(${mapScale.value})`,
+    transformOrigin: '0 0',
+  }
+})
 
 const selectedParkingName = computed(() => {
   return parkings.value.find((parking) => parking.id === selectedParkingId.value)?.name || selectedParkingId.value
@@ -248,6 +309,200 @@ const selectedEntranceVertexId = computed(() => {
 
   return entrance.vertex_id || entrance.id || null
 })
+
+function isInteractiveMapTarget(target) {
+  return Boolean(
+    target?.closest?.(
+      'button, input, select, textarea, a, .load-bar, .action-error'
+    )
+  )
+}
+
+function getPointerDistance(pointerA, pointerB) {
+  const dx = pointerA.x - pointerB.x
+  const dy = pointerA.y - pointerB.y
+
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+function getPointerCenter(pointerA, pointerB) {
+  return {
+    x: (pointerA.x + pointerB.x) / 2,
+    y: (pointerA.y + pointerB.y) / 2,
+  }
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function startMobileMapGesture(event) {
+  if (isInteractiveMapTarget(event.target)) {
+    return
+  }
+
+  if (event.pointerType === 'mouse' && event.button !== 0) {
+    return
+  }
+
+  activePointers.value.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY,
+  })
+
+  event.currentTarget?.setPointerCapture?.(event.pointerId)
+
+  if (activePointers.value.size === 1) {
+    isMapPanning.value = true
+    suppressMapSelection.value = false
+
+    mapPanStart.value = {
+      x: event.clientX,
+      y: event.clientY,
+    }
+
+    mapPanBeforeDrag.value = {
+      x: mapPan.value.x,
+      y: mapPan.value.y,
+    }
+  }
+
+  if (activePointers.value.size === 2) {
+    const pointers = Array.from(activePointers.value.values())
+    const center = getPointerCenter(pointers[0], pointers[1])
+
+    pinchStartDistance.value = getPointerDistance(pointers[0], pointers[1])
+    pinchStartScale.value = mapScale.value
+
+    pinchStartCenter.value = {
+      x: center.x,
+      y: center.y,
+    }
+
+    pinchStartPan.value = {
+      x: mapPan.value.x,
+      y: mapPan.value.y,
+    }
+
+    suppressMapSelection.value = true
+  }
+}
+
+function moveMobileMapGesture(event) {
+  if (!activePointers.value.has(event.pointerId)) {
+    return
+  }
+
+  activePointers.value.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY,
+  })
+
+  event.preventDefault()
+
+  if (activePointers.value.size === 2) {
+    const pointers = Array.from(activePointers.value.values())
+    const currentDistance = getPointerDistance(pointers[0], pointers[1])
+    const currentCenter = getPointerCenter(pointers[0], pointers[1])
+
+    if (!pinchStartDistance.value) {
+      return
+    }
+
+    const nextScale = clamp(
+      pinchStartScale.value * (currentDistance / pinchStartDistance.value),
+      minMapScale,
+      maxMapScale,
+    )
+
+    const scaleRatio = nextScale / pinchStartScale.value
+
+    mapScale.value = nextScale
+
+    mapPan.value = {
+      x:
+        currentCenter.x -
+        (pinchStartCenter.value.x - pinchStartPan.value.x) * scaleRatio,
+      y:
+        currentCenter.y -
+        (pinchStartCenter.value.y - pinchStartPan.value.y) * scaleRatio,
+    }
+
+    suppressMapSelection.value = true
+    return
+  }
+
+  if (activePointers.value.size === 1 && isMapPanning.value) {
+    const dx = event.clientX - mapPanStart.value.x
+    const dy = event.clientY - mapPanStart.value.y
+
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      suppressMapSelection.value = true
+    }
+
+    mapPan.value = {
+      x: mapPanBeforeDrag.value.x + dx,
+      y: mapPanBeforeDrag.value.y + dy,
+    }
+  }
+}
+
+function endMobileMapGesture(event) {
+  activePointers.value.delete(event.pointerId)
+
+  event.currentTarget?.releasePointerCapture?.(event.pointerId)
+
+  if (activePointers.value.size === 0) {
+    isMapPanning.value = false
+
+    window.setTimeout(() => {
+      suppressMapSelection.value = false
+    }, 200)
+  }
+
+  if (activePointers.value.size === 1) {
+    const pointer = Array.from(activePointers.value.values())[0]
+
+    mapPanStart.value = {
+      x: pointer.x,
+      y: pointer.y,
+    }
+
+    mapPanBeforeDrag.value = {
+      x: mapPan.value.x,
+      y: mapPan.value.y,
+    }
+
+    pinchStartDistance.value = 0
+    pinchStartScale.value = mapScale.value
+  }
+}
+
+function resetMobileMapTransform() {
+  mapScale.value = 0.65
+
+  mapPan.value = {
+    x: 0,
+    y: 80,
+  }
+
+  activePointers.value.clear()
+  pinchStartDistance.value = 0
+  pinchStartScale.value = mapScale.value
+
+  pinchStartCenter.value = {
+    x: 0,
+    y: 0,
+  }
+
+  pinchStartPan.value = {
+    x: 0,
+    y: 0,
+  }
+
+  isMapPanning.value = false
+  suppressMapSelection.value = false
+}
 
 function openMenu() {
   menuOpen.value = true
@@ -401,6 +656,7 @@ async function reloadState() {
     }
 
     await loadState()
+    resetMobileMapTransform()
     startPolling()
   } catch (error) {
     console.error('Ошибка загрузки мобильной карты:', error)
@@ -452,6 +708,16 @@ function selectEntrance(entranceId) {
 }
 
 function selectSpot(spot) {
+  if (suppressMapSelection.value && !menuOpen.value) {
+    return
+  }
+
+  selectedSpot.value = spot
+  routePath.value = []
+  actionError.value = ''
+}
+
+function selectSpotFromMenu(spot) {
   selectedSpot.value = spot
   routePath.value = []
   actionError.value = ''
@@ -620,16 +886,57 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mobile-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
   height: 100dvh;
   overflow: hidden;
-  position: relative;
-  background: #f1f5f9;
+  background: #10131a;
+  isolation: isolate;
 }
 
 .map-area {
-  position: absolute;
-  inset: 0 0 70px 0;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 78px;
   background: #10131a;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.mobile-map-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  z-index: 1;
+}
+
+.mobile-map-pan-layer {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  will-change: transform;
+  transform-origin: 0 0;
+  z-index: 1;
+}
+
+.mobile-map-pan-layer.panning {
+  cursor: grabbing;
+}
+
+.mobile-map-pan-layer :deep(.parking-map) {
+  touch-action: none;
+}
+
+.mobile-map-pan-layer :deep(.parking-map),
+.mobile-map-pan-layer :deep(.map-svg) {
+  overflow: visible;
 }
 
 .map-area :deep(.parking-map) {
@@ -646,13 +953,7 @@ onBeforeUnmount(() => {
 }
 
 .map-area :deep(.map-tools) {
-  right: 12px;
-  top: 46%;
-}
-
-.map-area :deep(.map-tools button) {
-  width: 42px;
-  height: 42px;
+  display: none !important;
 }
 
 .map-state-message {
@@ -672,25 +973,26 @@ onBeforeUnmount(() => {
 }
 
 .load-bar {
-  position: absolute;
+  position: fixed;
   left: 12px;
   top: 12px;
-  z-index: 5;
-  background: rgba(255, 255, 255, 0.92);
+  z-index: 3000;
+  background: rgba(255, 255, 255, 0.94);
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid #dbeafe;
   color: #1f2937;
   font-size: 14px;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+  pointer-events: none;
 }
 
 .action-error {
-  position: absolute;
+  position: fixed;
   left: 12px;
   right: 12px;
-  bottom: 12px;
-  z-index: 5;
+  bottom: 88px;
+  z-index: 3000;
   padding: 10px 12px;
   border-radius: 12px;
   background: #fee2e2;
@@ -699,32 +1001,40 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 
-.bottom-panel {
-  position: absolute;
-  display: flex;
+.mobile-bottom-panel {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+
+  width: 100vw;
+  min-height: 78px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+
+  display: flex !important;
   flex-direction: row;
-  bottom: 0;
-  width: 100%;
-  height: 70px;
-  background: white;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 0 12px;
-  box-shadow: 0 -8px 20px rgba(15, 23, 42, 0.12);
-  z-index: 20;
+  gap: 14px;
+
+  background: #ffffff;
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.18);
+  border-top: 1px solid #e5e7eb;
+
+  z-index: 99999 !important;
+  transform: none !important;
 }
 
-.route-btn-mobile {
+.mobile-route-btn {
   flex: 1;
-  max-width: 210px;
-  height: 50px;
-  border-radius: 12px;
+  max-width: 230px;
+  height: 52px;
+  border-radius: 14px;
   background: #2d8fe3;
   color: white;
   border: none;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -732,26 +1042,28 @@ onBeforeUnmount(() => {
   box-shadow: 0 6px 16px rgba(45, 143, 227, 0.28);
 }
 
-.bottom-btn {
-  width: 50px;
-  height: 50px;
+.mobile-bottom-btn {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
   border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.bottom-btn img {
+.mobile-bottom-btn img {
   width: 28px;
   height: 28px;
   object-fit: contain;
 }
 
-.menu-btn {
+.mobile-menu-btn {
   font-size: 30px;
   line-height: 1;
+  color: #111827;
 }
 
 .menu {
@@ -759,13 +1071,13 @@ onBeforeUnmount(() => {
   top: 0;
   right: -100%;
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   background: white;
   transition: 0.3s;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 50;
+  z-index: 100000;
 }
 
 .menu.open {
@@ -917,7 +1229,7 @@ onBeforeUnmount(() => {
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 200000;
   display: grid;
   place-items: center;
   background: rgba(15, 23, 42, 0.45);
@@ -963,6 +1275,26 @@ onBeforeUnmount(() => {
 }
 
 @media (max-height: 650px) {
+  .map-area {
+    bottom: 68px;
+  }
+
+  .mobile-bottom-panel {
+    min-height: 68px;
+    padding-top: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-route-btn,
+  .mobile-bottom-btn {
+    height: 48px;
+  }
+
+  .mobile-bottom-btn {
+    flex-basis: 48px;
+    width: 48px;
+  }
+
   .spots {
     padding-top: 18px;
   }
