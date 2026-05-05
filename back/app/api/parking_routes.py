@@ -454,17 +454,20 @@ def delete_parking(
     audit_logger: Annotated[AuditLogger, Depends(get_audit_logger)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
-    parking_db_id = int(parking.id)
-    deleted_parking_details = {
-        "parking_id": parking_db_id,
-        "parking_slug": parking.slug,
-        "parking_name": parking.name,
-    }
-    base = parking_storage_dir(db, parking)
 
-    # Удаляем явно, а не только через ORM/cascade.
-    # Это чинит ситуацию, когда парковка исчезла с фронта, но связанные строки
-    # остались в таблицах из-за отсутствующего/старого FK или soft-delete логики модели.
+    # ВАЖНО: все данные для лога и удаления файлов сохраняем ДО удаления строки из БД.
+    # После DELETE объект parking нельзя безопасно читать через parking.id / parking.slug / parking.name.
+    parking_db_id = int(parking.id)
+    parking_slug = str(parking.slug)
+    parking_name = str(parking.name)
+    parking_base = parking_storage_dir(db, parking)
+
+    deleted_parking_details = {
+        "deleted_parking_id": parking_db_id,
+        "deleted_parking_slug": parking_slug,
+        "deleted_parking_name": parking_name,
+    }
+
     try:
         vertex_ids = [
             row[0]
@@ -518,13 +521,15 @@ def delete_parking(
         db.rollback()
         raise
 
-    if base.exists():
-        import shutil
-        shutil.rmtree(base)
+    if parking_base.exists():
+        shutil.rmtree(parking_base)
+
+    # ВАЖНО: parking_id=None, потому что связанная парковка уже удалена.
+    # ID удалённой парковки хранится в details.
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор удалил парковку",
-        parking_id=parking_db_id,
+        parking_id=None,
         details=deleted_parking_details,
     )
 
