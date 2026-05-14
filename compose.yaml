@@ -35,6 +35,8 @@ services:
       INITIAL_ADMIN_FULL_NAME: ParkFlow Admin
       INITIAL_ADMIN_PASSWORD: adminadminadmin
       INITIAL_ADMIN_USERNAME: admin
+      INITIAL_COMPANY_NAME: Company 1
+      INITIAL_COMPANY_SLUG: Company_1_slug
     ports:
       - "8000:8000"
     volumes:
@@ -42,6 +44,8 @@ services:
       - ./models:/app/models
 
   detector:
+    profiles:
+      - detector
     image: parkflowai-detector
     build:
       context: .

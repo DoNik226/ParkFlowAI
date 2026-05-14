@@ -19,17 +19,18 @@ class ParkingRepository(BaseRepository[Parking]):
         return query.first()
 
     def get_by_id_or_slug(self, parking_id: str, company_id: int | None = None) -> Optional[Parking]:
-        query = self.db.query(Parking)
-
-        if parking_id.isdigit():
-            query = query.filter(Parking.id == int(parking_id))
-        else:
-            query = query.filter(Parking.slug == parking_id)
+        base_query = self.db.query(Parking)
 
         if company_id is not None:
-            query = query.filter(Parking.company_id == company_id)
+            base_query = base_query.filter(Parking.company_id == company_id)
 
-        return query.first()
+        if parking_id.isdigit():
+            parking = base_query.filter(Parking.id == int(parking_id)).first()
+
+            if parking:
+                return parking
+
+        return base_query.filter(Parking.slug == parking_id).first()
 
     def get_with_stats(self, parking_id: int) -> Optional[Parking]:
         return self.db.query(Parking).filter(Parking.id == parking_id).first()
