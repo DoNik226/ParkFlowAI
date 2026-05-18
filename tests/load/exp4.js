@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-const BASE_URL = 'http://127.0.0.1:8000';
+const BASE_URL = 'http://backend:8000';
 
 export const options = {
   vus: 50,
