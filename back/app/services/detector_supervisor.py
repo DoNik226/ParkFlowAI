@@ -27,6 +27,7 @@ from back.app.services.detect_parking import (
 
 DATA_ROOT = Path(os.getenv("DETECTOR_DATA_ROOT", "/app/data/companies"))
 DEFAULT_SLEEP_SEC = 0.5
+MAX_RECONNECT_ATTEMPTS = 3
 
 
 def read_json(path: Path, default=None):
@@ -90,6 +91,40 @@ def build_event_logger(db):
 def is_connection_error_message(message: str) -> bool:
     lowered = (message or "").lower()
     return "cannot open source" in lowered or "cannot read frame" in lowered
+
+
+def record_reconnect_failure(control: dict, max_attempts: int = MAX_RECONNECT_ATTEMPTS) -> tuple[dict, bool]:
+    updated = dict(control or {})
+    attempts = min(int(updated.get("failed_attempts") or 0) + 1, max_attempts)
+    updated["failed_attempts"] = attempts
+    updated["max_failed_attempts"] = max_attempts
+    return updated, attempts >= max_attempts
+
+
+def build_unknown_occupancy(occupancy: dict | None) -> dict | None:
+    if not isinstance(occupancy, dict) or not isinstance(occupancy.get("spots"), list):
+        return None
+
+    updated = dict(occupancy)
+    spots = []
+    for item in occupancy.get("spots", []):
+        if not isinstance(item, dict):
+            continue
+        spot = dict(item)
+        spot["status"] = "unknown"
+        spot["confidence"] = None
+        spot["vehicle"] = None
+        spots.append(spot)
+
+    updated["spots"] = spots
+    updated["summary"] = {
+        **(updated.get("summary") if isinstance(updated.get("summary"), dict) else {}),
+        "total": len(spots),
+        "occupied": 0,
+        "free": 0,
+        "unknown": len(spots),
+    }
+    return updated
 
 def normalize_layout_for_detector(layout: dict) -> dict:
     """
@@ -345,6 +380,7 @@ class ParkingDetectorRuntime:
     def mark_ok(self, changed: bool):
         control = read_json(self.control_path, default={}) or {}
         control["last_error"] = None
+        control["failed_attempts"] = 0
         control["last_processed_at"] = datetime.now(timezone.utc).isoformat()
         control["last_changed"] = changed
         write_json(self.control_path, control)
@@ -354,12 +390,18 @@ class ParkingDetectorRuntime:
     def mark_error(self, error: Exception):
         message = str(error)
         control = read_json(self.control_path, default={}) or {}
+        control, attempts_exhausted = record_reconnect_failure(control)
         control["last_error"] = message
         control["last_processed_at"] = datetime.now(timezone.utc).isoformat()
+        if attempts_exhausted:
+            control["active"] = False
         write_json(self.control_path, control)
         if message != self.last_error_message:
             self._persist_error_event(message)
             self.last_error_message = message
+        if attempts_exhausted:
+            self._mark_camera_offline()
+            self._mark_spots_unknown()
 
     def _mark_camera_online(self):
         camera_id = self.config.get("camera_id")
@@ -438,6 +480,30 @@ class ParkingDetectorRuntime:
             )
         finally:
             db.close()
+
+    def _mark_camera_offline(self):
+        camera_id = self.config.get("camera_id")
+        if camera_id is None:
+            return
+
+        db = SessionLocal()
+        try:
+            CameraRepository(db).update(int(camera_id), status=CameraStatus.OFFLINE.value)
+        finally:
+            db.close()
+
+    def _mark_spots_unknown(self):
+        save_json = self.config.get("save_json")
+        if not save_json:
+            return
+
+        path = Path(save_json)
+        occupancy = read_json(path, default=None)
+        unknown_occupancy = build_unknown_occupancy(occupancy)
+        if unknown_occupancy is None:
+            return
+
+        write_json(path, unknown_occupancy)
 
 
 def main():

@@ -1,0 +1,9 @@
+services:
+  k6:
+    image: grafana/k6:latest
+    volumes:
+      - ./tests:/tests
+    working_dir: /tests/load
+    command: run exp1.js
+    networks:
+      - default

@@ -10,6 +10,7 @@ from back.app.api.deps import get_db, require_admin
 from back.app.database import Base
 from back.app.main import app
 from back.app.models.camera import Camera
+from back.app.models.company import Company
 from back.app.models.event_log import EventLog
 from back.app.models.parking import Parking
 from back.app.models.user import User
@@ -54,8 +55,10 @@ class EventLoggingTestCase(unittest.TestCase):
     def _seed_base_data(cls):
         session = cls.SessionLocal()
         try:
+            company = Company(id=1, name="Test Company", slug="test-company", is_active=True)
             admin = User(
                 id=1,
+                company_id=1,
                 username="admin",
                 email="admin@example.com",
                 password_hash="hashed",
@@ -65,6 +68,7 @@ class EventLoggingTestCase(unittest.TestCase):
             )
             user = User(
                 id=2,
+                company_id=1,
                 username="ivan",
                 email="ivan@example.com",
                 password_hash="hashed",
@@ -72,15 +76,15 @@ class EventLoggingTestCase(unittest.TestCase):
                 full_name="Ivan Petrov",
                 is_active=True,
             )
-            parking = Parking(id=10, name="North Parking", is_active=True)
+            parking = Parking(id=10, company_id=1, name="North Parking", slug="north-parking", is_active=True)
             camera = Camera(
                 id=15,
                 name="Gate Camera",
-                rtsp_url="rtsp://camera",
+                source_url="rtsp://camera",
                 parking_id=10,
                 status="online",
             )
-            session.add_all([admin, user, parking, camera])
+            session.add_all([company, admin, user, parking, camera])
             session.flush()
             session.add_all(
                 [
