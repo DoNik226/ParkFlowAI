@@ -100,6 +100,14 @@ export const parkingService = {
     return `${normalizedBaseUrl}/parkings/${parkingId}/source-video/view?token=${encodeURIComponent(token)}`
   },
 
+  getSourceVideoStreamUrl(parkingId) {
+    const baseUrl = apiClient.defaults.baseURL || ''
+    const token = localStorage.getItem('access_token') || ''
+    const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+
+    return `${normalizedBaseUrl}/parkings/${parkingId}/source-video/stream.mjpg?token=${encodeURIComponent(token)}`
+  },
+
   getCameraStreamUrl(parkingId) {
     const baseUrl = apiClient.defaults.baseURL || ''
     const token = localStorage.getItem('access_token') || ''

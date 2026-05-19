@@ -31,6 +31,10 @@
             :route-path="routePath"
             :selected-spot-id="selectedSpot?.id || null"
             :selected-entrance-id="selectedEntranceVertexId"
+            :background-url="mapBackgroundUrl"
+            :background-type="mapBackgroundType"
+            :background-playing="mapBackgroundPlaying"
+            :show-graph="false"
             @select-spot="selectSpot"
           />
         </div>
@@ -191,6 +195,7 @@ const layout = ref(null)
 const mapData = ref(null)
 const occupancyState = ref(null)
 const routePath = ref([])
+const snapshotObjectUrl = ref('')
 
 const isLoading = ref(false)
 const mapError = ref('')
@@ -309,6 +314,77 @@ const selectedEntranceVertexId = computed(() => {
 
   return entrance.vertex_id || entrance.id || null
 })
+
+const currentCamera = computed(() => {
+  return layout.value?.camera || null
+})
+
+const mapBackgroundType = computed(() => {
+  const sourceType = String(currentCamera.value?.source_type || '').toLowerCase()
+
+  // Для тестового источника видео всегда остаётся фоном карты.
+  // На мобильной версии оно по умолчанию стоит на паузе, чтобы не расходовать ресурсы.
+  // Разметка накладывается в координатах frame_meta, как и на desktop-карте.
+  if (sourceType === 'video' && currentCamera.value?.test_video_path) {
+    return 'video'
+  }
+
+  if (sourceType === 'rtsp' && currentCamera.value?.source_url) {
+    return 'stream'
+  }
+
+  if (snapshotObjectUrl.value) {
+    return 'snapshot'
+  }
+
+  return 'none'
+})
+
+const mapBackgroundPlaying = computed(() => {
+  return false
+})
+
+const mapBackgroundUrl = computed(() => {
+  if (!selectedParkingId.value) {
+    return ''
+  }
+
+  if (mapBackgroundType.value === 'video') {
+    return parkingService.getSourceVideoUrl(selectedParkingId.value)
+  }
+
+  if (mapBackgroundType.value === 'stream') {
+    return parkingService.getCameraStreamUrl(selectedParkingId.value)
+  }
+
+  if (mapBackgroundType.value === 'snapshot') {
+    return snapshotObjectUrl.value
+  }
+
+  return ''
+})
+
+function clearSnapshotObjectUrl() {
+  if (snapshotObjectUrl.value) {
+    URL.revokeObjectURL(snapshotObjectUrl.value)
+    snapshotObjectUrl.value = ''
+  }
+}
+
+async function loadSnapshotObjectUrl() {
+  clearSnapshotObjectUrl()
+
+  if (!selectedParkingId.value) {
+    return
+  }
+
+  try {
+    const blob = await parkingService.getSnapshotBlob(selectedParkingId.value)
+    snapshotObjectUrl.value = URL.createObjectURL(blob)
+  } catch (err) {
+    snapshotObjectUrl.value = ''
+  }
+}
 
 function isInteractiveMapTarget(target) {
   return Boolean(
@@ -602,6 +678,7 @@ async function loadState() {
   }
 
   loadEntrancesFromMap()
+  await loadSnapshotObjectUrl()
 }
 
 function loadEntrancesFromMap() {
@@ -881,6 +958,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   stopPolling()
+  clearSnapshotObjectUrl()
 })
 </script>
 

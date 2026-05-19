@@ -79,6 +79,9 @@
             :route-path="routePath"
             :selected-spot-id="selectedSpot?.id || null"
             :selected-entrance-id="selectedEntranceVertexId"
+            :background-url="mapBackgroundUrl"
+            :background-type="mapBackgroundType"
+            :background-playing="mapBackgroundPlaying"
             @select-spot="selectSpot"
           />
         </div>
@@ -277,6 +280,69 @@ const showVideoDetectorControls = computed(() => {
 
 const detectorActive = computed(() => {
   return detectorStatus.value?.active === true
+})
+
+const currentCamera = computed(() => {
+  if (layout.value?.camera) {
+    return layout.value.camera
+  }
+
+  if (Array.isArray(layout.value?.cameras) && layout.value.cameras.length) {
+    return layout.value.cameras[0]
+  }
+
+  return null
+})
+
+const mapBackgroundType = computed(() => {
+  const sourceType = String(currentCamera.value?.source_type || '').toLowerCase()
+
+  if (sourceType === 'video' && currentCamera.value?.test_video_path) {
+    return 'stream'
+  }
+
+  if ((sourceType === 'rtsp' || sourceType === 'stream') && currentCamera.value?.source_url) {
+    return 'stream'
+  }
+
+  return ''
+})
+
+const mapBackgroundUrl = computed(() => {
+  if (!selectedParkingId.value) {
+    return ''
+  }
+
+  const sourceType = String(currentCamera.value?.source_type || '').toLowerCase()
+
+  if (sourceType === 'video' && currentCamera.value?.test_video_path) {
+    // Важно: для фоновой карты используем MJPEG-поток, который backend
+    // формирует через OpenCV. Так кадры отображаются в той же системе
+    // координат, что snapshot, detector и редактор разметки.
+    return detectorActive.value
+      ? parkingService.getSourceVideoStreamUrl(selectedParkingId.value)
+      : ''
+  }
+
+  if (mapBackgroundType.value === 'stream') {
+    return parkingService.getCameraStreamUrl(selectedParkingId.value)
+  }
+
+  return ''
+})
+
+const mapBackgroundPlaying = computed(() => {
+  const sourceType = String(currentCamera.value?.source_type || '').toLowerCase()
+
+  if (sourceType === 'video') {
+    return detectorActive.value
+  }
+
+  if (mapBackgroundType.value === 'stream') {
+    return true
+  }
+
+  return false
 })
 
 const userLabel = computed(() => {

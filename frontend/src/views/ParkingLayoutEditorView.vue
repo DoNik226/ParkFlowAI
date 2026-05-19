@@ -29,6 +29,22 @@
         передний левый → передний правый → задний правый → задний левый.
       </div>
 
+      <div v-if="backgroundType === 'video'" class="video-controls">
+        <div class="section-title">Фон разметки</div>
+
+        <button class="btn" type="button" @click="toggleVideoPlayback">
+          {{ backgroundPlaying ? 'Пауза видео' : 'Пуск видео' }}
+        </button>
+
+        <button class="btn" type="button" @click="seekVideoToStart">
+          В начало видео
+        </button>
+
+        <div class="hint">
+          Размечай места на паузе. Координаты будут сохранены по реальному размеру видео.
+        </div>
+      </div>
+
       <hr>
 
       <div class="section-title">
@@ -123,7 +139,7 @@
       />
 
       <div v-if="!imageLoaded && !loading" class="empty">
-        Скриншот не найден. Сначала загрузите или получите скриншот на странице настройки парковки.
+        Фон для разметки не найден. Загрузите тестовое видео или получите/загрузите скриншот на странице настройки парковки.
       </div>
 
       <div v-if="loading" class="empty">
@@ -162,6 +178,12 @@ const image = ref(null)
 const imageLoaded = ref(false)
 const imageObjectUrl = ref('')
 
+const backgroundType = ref('snapshot')
+const backgroundPlaying = ref(false)
+const videoElement = ref(null)
+
+let renderFrameHandle = null
+
 const zones = ref([])
 const selectedZoneId = ref(null)
 
@@ -198,7 +220,7 @@ const spotsCount = computed(() => {
 })
 
 const modeText = computed(() => {
-  if (!imageLoaded.value) return 'Скриншот не загружен'
+  if (!imageLoaded.value) return 'Фон разметки не загружен'
   if (addMode.value) return `Добавление зоны: точка ${addPoints.value.length + 1} из 4`
   if (selectedZone.value) return 'Выбрана зона. Можно двигать углы. Клик по пустому месту снимает выделение.'
   return 'Режим просмотра. Колесо — масштаб, ЛКМ по пустому месту — перемещение.'
@@ -227,7 +249,7 @@ async function loadEditor() {
     parkingName.value = parking.value.name
 
     await loadExistingLayout()
-    await loadSnapshotImage()
+    await loadBackgroundMedia()
 
     await nextTick()
     resizeCanvas()
@@ -258,8 +280,169 @@ async function loadExistingLayout() {
   }
 }
 
+
+function getCurrentCamera() {
+  if (parking.value?.camera) {
+    return parking.value.camera
+  }
+
+  if (Array.isArray(parking.value?.cameras) && parking.value.cameras.length) {
+    return parking.value.cameras[0]
+  }
+
+  return {
+    source_type: parking.value?.source_type,
+    source_url: parking.value?.source_url,
+    test_video_path: parking.value?.test_video_path,
+  }
+}
+
+function getFrameWidth() {
+  if (!image.value) return 0
+
+  if (backgroundType.value === 'video') {
+    return Number(image.value.videoWidth || 0)
+  }
+
+  return Number(image.value.naturalWidth || 0)
+}
+
+function getFrameHeight() {
+  if (!image.value) return 0
+
+  if (backgroundType.value === 'video') {
+    return Number(image.value.videoHeight || 0)
+  }
+
+  return Number(image.value.naturalHeight || 0)
+}
+
+async function loadBackgroundMedia() {
+  const camera = getCurrentCamera()
+  const sourceType = String(camera?.source_type || '').toLowerCase()
+  const hasVideo = Boolean(camera?.test_video_path || parking.value?.test_video_path)
+
+  if (sourceType === 'video' && hasVideo) {
+    try {
+      await loadVideoBackground()
+      return
+    } catch (err) {
+      console.warn('Не удалось загрузить видео как фон разметки, пробую snapshot:', err)
+    }
+  }
+
+  await loadSnapshotImage()
+}
+
+async function loadVideoBackground() {
+  stopVideoRenderLoop()
+
+  const video = document.createElement('video')
+  video.src = parkingService.getSourceVideoUrl(parkingId)
+  video.muted = true
+  video.loop = true
+  video.playsInline = true
+  video.preload = 'auto'
+
+  await new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      reject(new Error('Video loading timeout'))
+    }, 12000)
+
+    video.onloadedmetadata = () => {
+      window.clearTimeout(timeout)
+
+      if (!video.videoWidth || !video.videoHeight) {
+        reject(new Error('Video metadata is empty'))
+        return
+      }
+
+      resolve()
+    }
+
+    video.onerror = () => {
+      window.clearTimeout(timeout)
+      reject(new Error('Cannot load video'))
+    }
+
+    video.load()
+  })
+
+  try {
+    video.currentTime = 0.001
+    await new Promise((resolve) => {
+      video.onseeked = resolve
+      window.setTimeout(resolve, 400)
+    })
+  } catch {
+    // Если браузер не дал сделать seek до первого кадра, всё равно используем video.
+  }
+
+  image.value = video
+  videoElement.value = video
+  backgroundType.value = 'video'
+  backgroundPlaying.value = false
+  imageLoaded.value = true
+
+  render()
+}
+
+function startVideoRenderLoop() {
+  stopVideoRenderLoop()
+
+  const loop = () => {
+    render()
+    renderFrameHandle = window.requestAnimationFrame(loop)
+  }
+
+  renderFrameHandle = window.requestAnimationFrame(loop)
+}
+
+function stopVideoRenderLoop() {
+  if (renderFrameHandle) {
+    window.cancelAnimationFrame(renderFrameHandle)
+    renderFrameHandle = null
+  }
+}
+
+async function toggleVideoPlayback() {
+  if (backgroundType.value !== 'video' || !videoElement.value) return
+
+  if (backgroundPlaying.value) {
+    videoElement.value.pause()
+    backgroundPlaying.value = false
+    stopVideoRenderLoop()
+    render()
+    return
+  }
+
+  try {
+    await videoElement.value.play()
+    backgroundPlaying.value = true
+    startVideoRenderLoop()
+  } catch (err) {
+    console.warn('Не удалось запустить видео в редакторе:', err)
+    showError('Не удалось запустить видео в редакторе')
+  }
+}
+
+function seekVideoToStart() {
+  if (backgroundType.value !== 'video' || !videoElement.value) return
+
+  videoElement.value.pause()
+  backgroundPlaying.value = false
+  stopVideoRenderLoop()
+  videoElement.value.currentTime = 0
+  render()
+}
+
 async function loadSnapshotImage() {
   try {
+    stopVideoRenderLoop()
+    backgroundPlaying.value = false
+    backgroundType.value = 'snapshot'
+    videoElement.value = null
+
     const blob = await parkingService.getSnapshotBlob(parkingId)
 
     if (imageObjectUrl.value) {
@@ -307,17 +490,15 @@ function resizeCanvas() {
 
 function fitImageToCanvas() {
   const canvas = canvasRef.value
-  const img = image.value
-
-  if (!canvas || !img) return
+  if (!canvas || !image.value) return
 
   const padding = 40
 
   const availableWidth = Math.max(100, canvas.width - padding * 2)
   const availableHeight = Math.max(100, canvas.height - padding * 2)
 
-  const imageWidth = img.naturalWidth
-  const imageHeight = img.naturalHeight
+  const imageWidth = getFrameWidth()
+  const imageHeight = getFrameHeight()
 
   const fitScale = Math.min(
     availableWidth / imageWidth,
@@ -355,7 +536,7 @@ function render() {
   ctx.translate(offsetX.value, offsetY.value)
   ctx.scale(scale.value, scale.value)
 
-  ctx.drawImage(image.value, 0, 0, image.value.naturalWidth, image.value.naturalHeight)
+  ctx.drawImage(image.value, 0, 0, getFrameWidth(), getFrameHeight())
 
   zones.value.forEach((zone, index) => {
     drawZone(ctx, zone, index)
@@ -815,10 +996,14 @@ function buildLayoutPayload() {
       db_id: parking.value?.db_id,
       company_id: parking.value?.company_id,
     },
-    camera: {},
+    camera: {
+      source_type: getCurrentCamera()?.source_type || null,
+      source_url: getCurrentCamera()?.source_url || null,
+      test_video_path: getCurrentCamera()?.test_video_path || null,
+    },
     frame_meta: {
-      width: image.value?.naturalWidth || 0,
-      height: image.value?.naturalHeight || 0,
+      width: getFrameWidth(),
+      height: getFrameHeight(),
     },
     zones: layoutZones,
     spots,
@@ -870,6 +1055,11 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', resizeCanvas)
+  stopVideoRenderLoop()
+
+  if (videoElement.value) {
+    videoElement.value.pause()
+  }
 
   if (imageObjectUrl.value) {
     URL.revokeObjectURL(imageObjectUrl.value)
@@ -1031,6 +1221,15 @@ hr {
 
 .edit-zone input {
   margin-bottom: 10px;
+}
+
+.video-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.video-controls .hint {
+  margin-bottom: 8px;
 }
 
 .stats {
@@ -1262,6 +1461,15 @@ hr {
 
 .edit-zone input {
   margin-bottom: 10px;
+}
+
+.video-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.video-controls .hint {
+  margin-bottom: 8px;
 }
 
 .stats {

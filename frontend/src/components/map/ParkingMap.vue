@@ -25,17 +25,41 @@
         preserveAspectRatio="xMidYMid meet"
       >
         <g :transform="transform">
-          <g class="edges-layer">
-            <line
-              v-for="edge in normalizedEdges"
-              :key="edge.id"
-              :x1="edge.source.x"
-              :y1="edge.source.y"
-              :x2="edge.destination.x"
-              :y2="edge.destination.y"
-              class="graph-edge"
+          <foreignObject
+            v-if="backgroundUrl"
+            x="0"
+            y="0"
+            :width="frameWidth"
+            :height="frameHeight"
+            class="background-object"
+          >
+            <video
+              v-if="backgroundType === 'video'"
+              ref="backgroundVideoRef"
+              class="background-media"
+              :src="backgroundUrl"
+              muted
+              loop
+              playsinline
+              preload="auto"
             />
-          </g>
+
+            <img
+              v-else
+              class="background-media"
+              :src="backgroundUrl"
+              alt="Фон парковки"
+            >
+          </foreignObject>
+
+          <rect
+            v-else
+            x="0"
+            y="0"
+            :width="frameWidth"
+            :height="frameHeight"
+            class="fallback-background"
+          />
 
           <polyline
             v-if="routePoints.length >= 2"
@@ -67,37 +91,6 @@
               </text>
             </g>
           </g>
-
-          <g class="vertices-layer">
-            <g
-              v-for="vertex in vertices"
-              :key="vertex.id"
-              :class="[
-                'vertex-group',
-                vertex.type,
-                {
-                  route: routeVertexIds.includes(vertex.id),
-                  selectedEntrance: selectedEntranceId === vertex.id
-                }
-              ]"
-            >
-              <circle
-                :cx="vertex.x"
-                :cy="vertex.y"
-                :r="vertexRadius(vertex)"
-                class="vertex"
-              />
-
-              <text
-                :x="vertex.x"
-                :y="vertex.y - vertexRadius(vertex) - 6"
-                text-anchor="middle"
-                class="vertex-label"
-              >
-                {{ vertexLabel(vertex) }}
-              </text>
-            </g>
-          </g>
         </g>
       </svg>
     </template>
@@ -105,7 +98,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 defineEmits(['select-spot'])
 
@@ -134,9 +127,22 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  backgroundUrl: {
+    type: String,
+    default: '',
+  },
+  backgroundType: {
+    type: String,
+    default: '',
+  },
+  backgroundPlaying: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const containerRef = ref(null)
+const backgroundVideoRef = ref(null)
 
 const scale = ref(1)
 const offsetX = ref(0)
@@ -148,6 +154,14 @@ const lastMouse = ref({ x: 0, y: 0 })
 const MIN_SCALE = 0.6
 const MAX_SCALE = 5
 const SCALE_STEP = 0.18
+
+const frameWidth = computed(() => {
+  return Number(props.layout?.frame_meta?.width || props.layout?.image?.width || 1920)
+})
+
+const frameHeight = computed(() => {
+  return Number(props.layout?.frame_meta?.height || props.layout?.image?.height || 1080)
+})
 
 const vertices = computed(() => {
   return Array.isArray(props.mapData?.vertices) ? props.mapData.vertices : []
@@ -161,27 +175,6 @@ const vertexById = computed(() => {
   })
 
   return map
-})
-
-const normalizedEdges = computed(() => {
-  const edges = Array.isArray(props.mapData?.edges) ? props.mapData.edges : []
-
-  return edges
-    .map((edge) => {
-      const source = vertexById.value.get(edge.source)
-      const destination = vertexById.value.get(edge.destination)
-
-      if (!source || !destination) {
-        return null
-      }
-
-      return {
-        ...edge,
-        source,
-        destination,
-      }
-    })
-    .filter(Boolean)
 })
 
 const occupancyBySpotId = computed(() => {
@@ -199,10 +192,7 @@ const occupancyBySpotId = computed(() => {
 })
 
 const viewBox = computed(() => {
-  const width = props.layout?.frame_meta?.width || props.layout?.image?.width || 1920
-  const height = props.layout?.frame_meta?.height || props.layout?.image?.height || 1080
-
-  return `0 0 ${width} ${height}`
+  return `0 0 ${frameWidth.value} ${frameHeight.value}`
 })
 
 const transform = computed(() => {
@@ -213,10 +203,6 @@ const routePoints = computed(() => {
   return props.routePath
     .map((vertexId) => vertexById.value.get(vertexId))
     .filter(Boolean)
-})
-
-const routeVertexIds = computed(() => {
-  return props.routePath || []
 })
 
 const routePolyline = computed(() => {
@@ -260,18 +246,6 @@ function label(spot) {
   return ''
 }
 
-function vertexRadius(vertex) {
-  if (vertex.type === 'entrance') return 14
-  if (vertex.type === 'spot_access') return 8
-  return 10
-}
-
-function vertexLabel(vertex) {
-  if (vertex.type === 'entrance') return vertex.name || 'Въезд'
-  if (vertex.type === 'spot_access') return vertex.name || vertex.spot_id || ''
-  return ''
-}
-
 function clampScale(value) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value))
 }
@@ -307,23 +281,19 @@ function onWheel(event) {
   }
 
   const rect = svg.getBoundingClientRect()
-  const width = props.layout?.frame_meta?.width || props.layout?.image?.width || 1920
-  const height = props.layout?.frame_meta?.height || props.layout?.image?.height || 1080
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
 
-  const mouseX = ((event.clientX - rect.left) / rect.width) * width
-  const mouseY = ((event.clientY - rect.top) / rect.height) * height
+  const svgX = (x / rect.width) * frameWidth.value
+  const svgY = (y / rect.height) * frameHeight.value
 
-  const scaleRatio = newScale / oldScale
-
-  offsetX.value = mouseX - (mouseX - offsetX.value) * scaleRatio
-  offsetY.value = mouseY - (mouseY - offsetY.value) * scaleRatio
+  offsetX.value = svgX - ((svgX - offsetX.value) / oldScale) * newScale
+  offsetY.value = svgY - ((svgY - offsetY.value) / oldScale) * newScale
   scale.value = newScale
 }
 
 function startPan(event) {
-  if (event.button !== 0) {
-    return
-  }
+  if (event.button !== 0) return
 
   isPanning.value = true
   lastMouse.value = {
@@ -333,28 +303,21 @@ function startPan(event) {
 }
 
 function onPan(event) {
-  if (!isPanning.value) {
-    return
-  }
+  if (!isPanning.value) return
+
+  const dx = event.clientX - lastMouse.value.x
+  const dy = event.clientY - lastMouse.value.y
 
   const svg = containerRef.value?.querySelector('svg')
+  const rect = svg?.getBoundingClientRect()
 
-  if (!svg) {
-    return
+  if (rect) {
+    offsetX.value += (dx / rect.width) * frameWidth.value
+    offsetY.value += (dy / rect.height) * frameHeight.value
+  } else {
+    offsetX.value += dx
+    offsetY.value += dy
   }
-
-  const rect = svg.getBoundingClientRect()
-  const width = props.layout?.frame_meta?.width || props.layout?.image?.width || 1920
-  const height = props.layout?.frame_meta?.height || props.layout?.image?.height || 1080
-
-  const dxPx = event.clientX - lastMouse.value.x
-  const dyPx = event.clientY - lastMouse.value.y
-
-  const dxViewBox = (dxPx / rect.width) * width
-  const dyViewBox = (dyPx / rect.height) * height
-
-  offsetX.value += dxViewBox
-  offsetY.value += dyViewBox
 
   lastMouse.value = {
     x: event.clientX,
@@ -365,6 +328,34 @@ function onPan(event) {
 function stopPan() {
   isPanning.value = false
 }
+
+async function syncBackgroundVideoPlayback() {
+  await nextTick()
+
+  const video = backgroundVideoRef.value
+
+  if (!video) {
+    return
+  }
+
+  if (props.backgroundPlaying) {
+    try {
+      await video.play()
+    } catch (error) {
+      console.warn('Не удалось запустить видео-фон:', error)
+    }
+  } else {
+    video.pause()
+  }
+}
+
+watch(
+  () => [props.backgroundUrl, props.backgroundType, props.backgroundPlaying],
+  () => {
+    syncBackgroundVideoPlayback()
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -400,6 +391,21 @@ function stopPan() {
   background: #10131a;
 }
 
+.background-object {
+  pointer-events: none;
+}
+
+.background-media {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: fill;
+}
+
+.fallback-background {
+  fill: #10131a;
+}
+
 .map-tools {
   position: absolute;
   right: 16px;
@@ -422,12 +428,6 @@ function stopPan() {
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-}
-
-.graph-edge {
-  stroke: rgba(255, 255, 255, 0.38);
-  stroke-width: 4;
-  stroke-linecap: round;
 }
 
 .route-line {
@@ -473,41 +473,6 @@ function stopPan() {
 .spot-label {
   fill: #fff;
   font-size: 26px;
-  font-weight: 800;
-  paint-order: stroke;
-  stroke: #111;
-  stroke-width: 4px;
-  pointer-events: none;
-}
-
-.vertex {
-  stroke-width: 3;
-}
-
-.vertex-group.road .vertex {
-  fill: #ef4444;
-}
-
-.vertex-group.entrance .vertex {
-  fill: #22c55e;
-}
-
-.vertex-group.spot_access .vertex {
-  fill: #8b5cf6;
-}
-
-.vertex-group.route .vertex {
-  fill: #fbbf24;
-}
-
-.vertex-group.selectedEntrance .vertex {
-  stroke: #fbbf24;
-  stroke-width: 6;
-}
-
-.vertex-label {
-  fill: #fff;
-  font-size: 18px;
   font-weight: 800;
   paint-order: stroke;
   stroke: #111;

@@ -3,16 +3,23 @@ import json
 import re
 import shutil
 import tempfile
+import time
 from typing import Annotated, Any
 
 import cv2
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
-from back.app.core.security import decode_access_token
-from back.app.repositories.user_repository import UserRepository
 
 from back.app.api.deps import (
     assert_same_company_or_super_admin,
@@ -20,6 +27,7 @@ from back.app.api.deps import (
     get_current_active_user,
     require_admin,
 )
+from back.app.core.security import decode_access_token
 from back.app.database import get_db
 from back.app.logger import AuditLogger
 from back.app.models.enums import UserRole, CameraSourceType, CameraStatus
@@ -27,8 +35,16 @@ from back.app.models.user import User
 from back.app.repositories.camera_repository import CameraRepository
 from back.app.repositories.company_repository import CompanyRepository
 from back.app.repositories.parking_repository import ParkingRepository
-from back.app.schemas.parkings import ParkingCreate, ParkingUpdate, ParkingResponse, ParkingLayoutSave, ParkingMapSave
+from back.app.repositories.user_repository import UserRepository
+from back.app.schemas.parkings import (
+    ParkingCreate,
+    ParkingUpdate,
+    ParkingResponse,
+    ParkingLayoutSave,
+    ParkingMapSave,
+)
 from back.app.services.parking_layout_storage_service import ParkingLayoutStorageService
+
 
 router = APIRouter(tags=["parkings"])
 
@@ -36,26 +52,28 @@ DATA_ROOT = Path("/app/data/companies")
 
 
 def runtime_video_path(parking, suffix: str) -> Path:
-    """ASCII-путь для OpenCV.
+    """
+    ASCII-путь для OpenCV.
 
-    На Windows OpenCV часто не открывает/не записывает файлы, если в пути есть
-    кириллица. Поэтому видео для runtime-операций кладём в отдельную папку без
-    имени парковки.
+    На Windows/OpenCV иногда бывают проблемы с путями, где есть кириллица.
+    Поэтому тестовое видео для runtime-операций кладём в отдельную папку.
     """
     safe_suffix = suffix if suffix else ".mp4"
     return DATA_ROOT / "_runtime" / "videos" / f"parking_{parking.id}_test_video{safe_suffix}"
 
 
 def write_image_unicode_safe(path: str | Path, image) -> None:
-    """Сохраняет изображение без cv2.imwrite(path, ...).
+    """
+    Безопасное сохранение изображения.
 
-    cv2.imwrite может вернуть False на путях с кириллицей. imencode кодирует
-    изображение в памяти, а Path.write_bytes уже нормально работает с Unicode.
+    cv2.imwrite может некорректно работать с Unicode-путями.
+    Поэтому изображение кодируется в памяти и сохраняется через Path.write_bytes().
     """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
 
     suffix = target.suffix.lower() or ".jpg"
+
     if suffix == ".jpeg":
         encode_ext = ".jpg"
     elif suffix in {".jpg", ".png", ".webp", ".bmp"}:
@@ -64,6 +82,7 @@ def write_image_unicode_safe(path: str | Path, image) -> None:
         encode_ext = ".jpg"
 
     ok, encoded = cv2.imencode(encode_ext, image)
+
     if not ok:
         raise HTTPException(status_code=500, detail="Cannot encode snapshot")
 
@@ -71,11 +90,12 @@ def write_image_unicode_safe(path: str | Path, image) -> None:
 
 
 def open_video_capture_unicode_safe(source: str):
-    """Открывает видео/RTSP, обходя проблему OpenCV с Unicode-путями.
+    """
+    Открывает видео/RTSP.
 
-    Для URL ничего не меняем. Для локального файла сначала пробуем обычный путь,
-    затем при необходимости копируем файл во временный ASCII-путь и открываем его.
-    Возвращает (cap, temp_path), где temp_path нужно удалить после release().
+    Для URL ничего не меняется.
+    Для локального файла сначала пробуем открыть как есть.
+    Если OpenCV не смог открыть файл, копируем его во временный ASCII-путь.
     """
     source_text = str(source)
 
@@ -83,12 +103,14 @@ def open_video_capture_unicode_safe(source: str):
         return cv2.VideoCapture(source_text), None
 
     cap = cv2.VideoCapture(source_text)
+
     if cap.isOpened():
         return cap, None
 
     cap.release()
 
     source_path = Path(source_text)
+
     if not source_path.exists():
         return cv2.VideoCapture(source_text), None
 
@@ -107,19 +129,21 @@ def slugify(value: str) -> str:
     value = value.strip().lower()
     value = re.sub(r"[^a-zа-я0-9]+", "_", value, flags=re.IGNORECASE)
     value = value.strip("_")
+
     return value or "parking"
 
 
 def safe_name(value: str) -> str:
     normalized = value.replace("_", "").replace("-", "")
+
     if not normalized.isalnum():
         raise HTTPException(status_code=400, detail="Invalid identifier")
+
     return value
 
 
 def get_company_slug(db: Session, company_id: int) -> str:
-    repo = CompanyRepository(db)
-    company = repo.get_by_id(company_id)
+    company = CompanyRepository(db).get_by_id(company_id)
 
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -138,6 +162,7 @@ def read_json(path: str | Path, default: Any = None):
     if not path.exists():
         if default is not None:
             return default
+
         raise HTTPException(status_code=404, detail=f"File not found: {path.name}")
 
     with path.open("r", encoding="utf-8") as file:
@@ -157,10 +182,10 @@ def write_json(path: str | Path, data: Any) -> None:
 
 
 def ensure_parking_files(db: Session, parking) -> None:
-    """Создаёт только runtime-пути для старого детектора.
+    """
+    Создаёт runtime-пути для layout/map/occupancy/debug-frame.
 
-    Источник истины для layout/map/occupancy теперь БД. JSON-файлы нужны только потому,
-    что detector_supervisor/detect_parking пока читают и пишут файлы.
+    Основные данные хранятся в БД, но detector использует runtime JSON-файлы.
     """
     base = parking_storage_dir(db, parking)
     base.mkdir(parents=True, exist_ok=True)
@@ -200,7 +225,10 @@ def resolve_parking(
     if current_user.role == UserRole.SUPER_ADMIN.value:
         parking = repo.get_by_id_or_slug(parking_id)
     else:
-        parking = repo.get_by_id_or_slug(parking_id, company_id=current_user.company_id)
+        parking = repo.get_by_id_or_slug(
+            parking_id,
+            company_id=current_user.company_id,
+        )
 
     if not parking:
         raise HTTPException(status_code=404, detail="Parking not found")
@@ -209,15 +237,19 @@ def resolve_parking(
     ensure_parking_files(db, parking)
 
     db.refresh(parking)
+
     return parking
 
 
 def sync_occupancy_from_runtime_file(db: Session, parking) -> None:
-    """Подхватывает occupancy.json, который обновляет старый detector_supervisor, и кладёт его в БД."""
+    """
+    Подхватывает occupancy.json, который обновляет detector, и синхронизирует его с БД.
+    """
     if not parking.occupancy_file_path:
         return
 
     path = Path(parking.occupancy_file_path)
+
     if not path.exists():
         return
 
@@ -228,6 +260,68 @@ def sync_occupancy_from_runtime_file(db: Session, parking) -> None:
 
     if isinstance(occupancy, dict) and isinstance(occupancy.get("spots"), list):
         ParkingLayoutStorageService(db).save_occupancy_to_db(parking.id, occupancy)
+
+
+def get_user_from_token(token: str, db: Session) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+    )
+
+    try:
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+
+        if user_id is None:
+            raise credentials_exception
+
+        user = UserRepository(db).get_by_id(int(user_id))
+    except Exception:
+        raise credentials_exception
+
+    if user is None or not user.is_active:
+        raise credentials_exception
+
+    return user
+
+
+def get_user_from_header_or_query_token(
+    request: Request,
+    db: Session,
+    token: str | None = None,
+) -> User:
+    """
+    Авторизация для media endpoint-ов.
+
+    Axios умеет отправлять Authorization: Bearer <token>.
+    А <video>, <img> и MJPEG-потоки не умеют удобно добавлять такой header.
+    Поэтому для них разрешаем токен в query-параметре: ?token=...
+    """
+    raw_token = token
+
+    if not raw_token:
+        authorization = request.headers.get("Authorization", "")
+
+        if authorization.startswith("Bearer "):
+            raw_token = authorization.replace("Bearer ", "", 1).strip()
+
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    return get_user_from_token(raw_token, db)
+
+
+def get_source_camera_or_404(db: Session, parking):
+    camera = CameraRepository(db).get_first_by_parking(parking.id)
+
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+
+    return camera
+
 
 def serialize_camera(camera) -> dict | None:
     if not camera:
@@ -245,6 +339,7 @@ def serialize_camera(camera) -> dict | None:
         "last_snapshot_path": camera.last_snapshot_path,
     }
 
+
 def summarize_parking(db: Session, parking) -> dict:
     ensure_parking_files(db, parking)
     db.refresh(parking)
@@ -257,6 +352,7 @@ def summarize_parking(db: Session, parking) -> dict:
 
     camera_repo = CameraRepository(db)
     cameras = camera_repo.get_by_parking(parking.id)
+
     serialized_cameras = [
         serialize_camera(camera)
         for camera in cameras
@@ -281,8 +377,6 @@ def summarize_parking(db: Session, parking) -> dict:
         "spots_count": len(layout.get("spots", [])),
         "zones_count": len(layout.get("zones", [])),
         "summary": occupancy.get("summary", {}),
-
-        # Для frontend ParkingView.vue
         "camera": first_camera,
         "cameras": serialized_cameras,
         "camera_id": first_camera.get("id") if first_camera else None,
@@ -292,6 +386,81 @@ def summarize_parking(db: Session, parking) -> dict:
         "test_video_path": first_camera.get("test_video_path") if first_camera else None,
         "camera_status": first_camera.get("status") if first_camera else None,
     }
+
+
+def guess_video_media_type(path: str | Path) -> str:
+    suffix = Path(path).suffix.lower()
+
+    if suffix == ".webm":
+        return "video/webm"
+
+    if suffix == ".mov":
+        return "video/quicktime"
+
+    if suffix == ".avi":
+        return "video/x-msvideo"
+
+    if suffix == ".mkv":
+        return "video/x-matroska"
+
+    return "video/mp4"
+
+
+def mjpeg_frame_generator(source: str, loop: bool = True, fps: float = 15.0):
+    """
+    Отдаёт видео/RTSP как MJPEG-поток.
+
+    Важно:
+    - не используем cv2.waitKey(), потому что backend работает без GUI;
+    - не выбрасываем HTTPException внутри generator после старта ответа;
+    - при конце тестового видео перематываемся в начало.
+    """
+    delay_sec = 1.0 / max(fps, 1.0)
+
+    cap, temp_source_path = open_video_capture_unicode_safe(source)
+
+    try:
+        while True:
+            if not cap.isOpened():
+                break
+
+            ok, frame = cap.read()
+
+            if not ok or frame is None:
+                if loop:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    time.sleep(delay_sec)
+                    continue
+
+                break
+
+            ok, encoded = cv2.imencode(".jpg", frame)
+
+            if not ok:
+                time.sleep(delay_sec)
+                continue
+
+            frame_bytes = encoded.tobytes()
+
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n"
+                b"Cache-Control: no-cache\r\n"
+                b"Pragma: no-cache\r\n\r\n"
+                + frame_bytes
+                + b"\r\n"
+            )
+
+            time.sleep(delay_sec)
+
+    finally:
+        cap.release()
+
+        if temp_source_path is not None:
+            try:
+                Path(temp_source_path).unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
 @router.get("/parkings", response_model=list[ParkingResponse])
@@ -306,6 +475,7 @@ def list_parkings(
     else:
         if current_user.company_id is None:
             return []
+
         parkings = repo.list_for_company(current_user.company_id, limit=1000)
 
     return [summarize_parking(db, parking) for parking in parkings]
@@ -350,7 +520,12 @@ def create_parking(
     camera_name = data.camera_name or f"Камера {parking.name}"
 
     source_type = data.source_type or CameraSourceType.RTSP.value
-    if source_type not in {CameraSourceType.RTSP.value, CameraSourceType.VIDEO.value, CameraSourceType.IMAGE.value}:
+
+    if source_type not in {
+        CameraSourceType.RTSP.value,
+        CameraSourceType.VIDEO.value,
+        CameraSourceType.IMAGE.value,
+    }:
         raise HTTPException(status_code=400, detail="Invalid source_type")
 
     camera = camera_repo.create(
@@ -384,9 +559,14 @@ def create_parking(
 
     storage = ParkingLayoutStorageService(db)
     storage.save_layout_to_db(parking, initial_layout)
-    storage.write_runtime_json_files(parking, parking.layout_file_path, parking.occupancy_file_path)
+    storage.write_runtime_json_files(
+        parking,
+        parking.layout_file_path,
+        parking.occupancy_file_path,
+    )
 
     result = summarize_parking(db, parking)
+
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор создал парковку",
@@ -399,6 +579,7 @@ def create_parking(
             "source_type": camera.source_type,
         },
     )
+
     return result
 
 
@@ -409,6 +590,7 @@ def get_parking(
     db: Annotated[Session, Depends(get_db)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
+
     return summarize_parking(db, parking)
 
 
@@ -427,11 +609,14 @@ def update_parking(
 
     if "slug" in update_data and update_data["slug"]:
         new_slug = safe_name(update_data["slug"])
+
         if repo.slug_exists(parking.company_id, new_slug, exclude_parking_id=parking.id):
             raise HTTPException(status_code=409, detail="Parking slug already exists")
+
         update_data["slug"] = new_slug
 
     updated = repo.update(parking.id, **update_data)
+
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор обновил парковку",
@@ -455,8 +640,6 @@ def delete_parking(
 ):
     parking = resolve_parking(parking_id, db, current_user)
 
-    # ВАЖНО: все данные для лога и удаления файлов сохраняем ДО удаления строки из БД.
-    # После DELETE объект parking нельзя безопасно читать через parking.id / parking.slug / parking.name.
     parking_db_id = int(parking.id)
     parking_slug = str(parking.slug)
     parking_name = str(parking.name)
@@ -498,7 +681,10 @@ def delete_parking(
                        OR destination = ANY(:vertex_ids)
                     """
                 ),
-                {"parking_id": parking_db_id, "vertex_ids": vertex_ids},
+                {
+                    "parking_id": parking_db_id,
+                    "vertex_ids": vertex_ids,
+                },
             )
         else:
             db.execute(
@@ -524,8 +710,6 @@ def delete_parking(
     if parking_base.exists():
         shutil.rmtree(parking_base)
 
-    # ВАЖНО: parking_id=None, потому что связанная парковка уже удалена.
-    # ID удалённой парковки хранится в details.
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор удалил парковку",
@@ -541,6 +725,7 @@ def get_layout(
     db: Annotated[Session, Depends(get_db)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
+
     return ParkingLayoutStorageService(db).build_layout_from_db(parking)
 
 
@@ -588,7 +773,12 @@ def save_layout(
 
     storage = ParkingLayoutStorageService(db)
     storage.save_layout_to_db(parking, layout)
-    storage.write_runtime_json_files(parking, parking.layout_file_path, parking.occupancy_file_path)
+    storage.write_runtime_json_files(
+        parking,
+        parking.layout_file_path,
+        parking.occupancy_file_path,
+    )
+
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор сохранил разметку парковки",
@@ -614,6 +804,7 @@ def get_map(
     db: Annotated[Session, Depends(get_db)],
 ):
     parking = resolve_parking(parking_id, db, current_user)
+
     return ParkingLayoutStorageService(db).build_map_from_db(parking)
 
 
@@ -628,6 +819,7 @@ def save_map(
     parking = resolve_parking(parking_id, db, current_user)
 
     map_data = data.map
+
     map_data.setdefault("parking", {})
     map_data["parking"]["id"] = parking.slug
     map_data["parking"]["db_id"] = parking.id
@@ -636,10 +828,15 @@ def save_map(
 
     storage = ParkingLayoutStorageService(db)
     storage.save_map_to_db(parking, map_data)
-    storage.write_runtime_json_files(parking, parking.layout_file_path, parking.occupancy_file_path)
+    storage.write_runtime_json_files(
+        parking,
+        parking.layout_file_path,
+        parking.occupancy_file_path,
+    )
 
     if parking.map_file_path:
         write_json(parking.map_file_path, storage.build_map_from_db(parking))
+
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор сохранил карту парковки",
@@ -666,6 +863,7 @@ def get_occupancy(
 ):
     parking = resolve_parking(parking_id, db, current_user)
     sync_occupancy_from_runtime_file(db, parking)
+
     return ParkingLayoutStorageService(db).build_occupancy_from_db(parking)
 
 
@@ -749,11 +947,10 @@ async def upload_source_video(
     camera_repo = CameraRepository(db)
 
     suffix = Path(file.filename or "").suffix.lower()
+
     if suffix not in {".mp4", ".avi", ".mov", ".mkv", ".webm"}:
         raise HTTPException(status_code=400, detail="Unsupported video format")
 
-    # Основной runtime-путь делаем ASCII-only, чтобы OpenCV на Windows
-    # корректно открывал загруженное видео даже при slug вроде "офис".
     target = runtime_video_path(parking, suffix)
     target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -761,14 +958,15 @@ async def upload_source_video(
         while chunk := await file.read(1024 * 1024):
             output.write(chunk)
 
-    # Дополнительно оставляем копию рядом с парковкой для удобства просмотра файлов.
     base = parking_storage_dir(db, parking)
     legacy_target = base / "source" / f"test_video{suffix}"
     legacy_target.parent.mkdir(parents=True, exist_ok=True)
+
     if legacy_target != target:
         shutil.copyfile(target, legacy_target)
 
     camera = camera_repo.get_first_by_parking(parking.id)
+
     if camera:
         camera_repo.update(
             camera.id,
@@ -776,6 +974,7 @@ async def upload_source_video(
             test_video_path=str(target),
             source_url=None,
         )
+
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор загрузил тестовое видео",
@@ -794,6 +993,7 @@ async def upload_source_video(
         "stored_copy_path": str(legacy_target),
     }
 
+
 @router.delete("/parkings/{parking_id}/source-video")
 def delete_source_video(
     parking_id: str,
@@ -810,7 +1010,6 @@ def delete_source_video(
 
     deleted_files = []
 
-    # Удаляем основной runtime-файл видео
     if camera.test_video_path:
         video_path = Path(camera.test_video_path)
 
@@ -818,7 +1017,6 @@ def delete_source_video(
             video_path.unlink()
             deleted_files.append(str(video_path))
 
-    # Удаляем копии test_video.* в папке парковки/source
     base = parking_storage_dir(db, parking)
     source_dir = base / "source"
 
@@ -828,8 +1026,8 @@ def delete_source_video(
                 file_path.unlink()
                 deleted_files.append(str(file_path))
 
-    # Останавливаем detector, если он был запущен
     control_file = base / "detector_control.json"
+
     if control_file.exists():
         try:
             control = read_json(control_file, default={}) or {}
@@ -839,20 +1037,17 @@ def delete_source_video(
         except Exception:
             pass
 
-    # Очищаем видео у камеры
     update_data = {
         "test_video_path": None,
     }
 
-    # Если RTSP URL есть — возвращаем источник на RTSP
     if camera.source_url:
         update_data["source_type"] = CameraSourceType.RTSP.value
     else:
-        # Если RTSP нет, оставляем тип video, но без файла.
-        # Frontend покажет "не активно".
         update_data["source_type"] = CameraSourceType.VIDEO.value
 
     camera_repo.update(camera.id, **update_data)
+
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор удалил тестовое видео",
@@ -882,6 +1077,7 @@ async def upload_snapshot(
     parking = resolve_parking(parking_id, db, current_user)
 
     suffix = Path(file.filename or "").suffix.lower()
+
     if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
         raise HTTPException(status_code=400, detail="Unsupported image format")
 
@@ -894,6 +1090,7 @@ async def upload_snapshot(
 
     repo = ParkingRepository(db)
     repo.update(parking.id, screenshot_file_path=str(target))
+
     audit_logger.log_admin_action(
         current_user.id,
         "Администратор загрузил snapshot парковки",
@@ -925,17 +1122,23 @@ def capture_snapshot(
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
 
-    source = camera.source_url if camera.source_type == CameraSourceType.RTSP.value else camera.test_video_path
+    source = (
+        camera.source_url
+        if camera.source_type == CameraSourceType.RTSP.value
+        else camera.test_video_path
+    )
 
     if not source:
         raise HTTPException(status_code=400, detail="Camera source is empty")
 
     cap, temp_source_path = open_video_capture_unicode_safe(source)
+
     try:
         if not cap.isOpened():
             raise HTTPException(status_code=400, detail="Cannot open camera source")
 
         ok, frame = cap.read()
+
         if not ok or frame is None:
             raise HTTPException(status_code=400, detail="Cannot read frame")
 
@@ -947,7 +1150,12 @@ def capture_snapshot(
         parking_repo = ParkingRepository(db)
         parking_repo.update(parking.id, screenshot_file_path=str(target))
 
-        camera_repo.update(camera.id, last_snapshot_path=str(target), status=CameraStatus.ONLINE.value)
+        camera_repo.update(
+            camera.id,
+            last_snapshot_path=str(target),
+            status=CameraStatus.ONLINE.value,
+        )
+
         audit_logger.log_admin_action(
             current_user.id,
             "Администратор сохранил snapshot с камеры",
@@ -964,8 +1172,10 @@ def capture_snapshot(
             "status": "ok",
             "screenshot_file_path": str(target),
         }
+
     finally:
         cap.release()
+
         if temp_source_path is not None:
             try:
                 Path(temp_source_path).unlink(missing_ok=True)
@@ -986,63 +1196,15 @@ def get_snapshot(
 
     return FileResponse(parking.screenshot_file_path)
 
-def get_user_from_query_token(token: str, db: Session) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-    )
-
-    try:
-        payload = decode_access_token(token)
-        user_id = payload.get("sub")
-
-        if user_id is None:
-            raise credentials_exception
-
-        user = UserRepository(db).get_by_id(int(user_id))
-    except Exception:
-        raise credentials_exception
-
-    if user is None or not user.is_active:
-        raise credentials_exception
-
-    return user
-
-
-def get_source_camera_or_404(db: Session, parking):
-    camera = CameraRepository(db).get_first_by_parking(parking.id)
-
-    if not camera:
-        raise HTTPException(status_code=404, detail="Camera not found")
-
-    return camera
-
-
-def guess_video_media_type(path: str | Path) -> str:
-    suffix = Path(path).suffix.lower()
-
-    if suffix == ".webm":
-        return "video/webm"
-
-    if suffix == ".mov":
-        return "video/quicktime"
-
-    if suffix == ".avi":
-        return "video/x-msvideo"
-
-    if suffix == ".mkv":
-        return "video/x-matroska"
-
-    return "video/mp4"
-
 
 @router.get("/parkings/{parking_id}/source-video/view")
 def view_source_video(
     parking_id: str,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
-    token: str = Query(...),
+    token: str | None = Query(default=None),
 ):
-    current_user = get_user_from_query_token(token, db)
+    current_user = get_user_from_header_or_query_token(request, db, token)
     parking = resolve_parking(parking_id, db, current_user)
     camera = get_source_camera_or_404(db, parking)
 
@@ -1064,35 +1226,42 @@ def view_source_video(
     )
 
 
-def mjpeg_frame_generator(source: str):
-    cap, temp_source_path = open_video_capture_unicode_safe(source)
+@router.get("/parkings/{parking_id}/source-video/stream.mjpg")
+def view_source_video_stream(
+    parking_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    token: str | None = Query(default=None),
+):
+    current_user = get_user_from_header_or_query_token(request, db, token)
+    parking = resolve_parking(parking_id, db, current_user)
+    camera = get_source_camera_or_404(db, parking)
+
+    if camera.source_type != CameraSourceType.VIDEO.value:
+        raise HTTPException(status_code=400, detail="Parking source is not video")
+
+    if not camera.test_video_path:
+        raise HTTPException(status_code=404, detail="Video file is not configured")
+
+    video_path = Path(camera.test_video_path)
+
+    if not video_path.exists() or not video_path.is_file():
+        raise HTTPException(status_code=404, detail="Video file not found")
+
+    # Проверяем до StreamingResponse, чтобы браузер не получил оборванный chunked-response.
+    test_cap, temp_source_path = open_video_capture_unicode_safe(str(video_path))
 
     try:
-        if not cap.isOpened():
-            raise HTTPException(status_code=400, detail="Cannot open camera source")
+        if not test_cap.isOpened():
+            raise HTTPException(status_code=400, detail="Cannot open video file")
 
-        while True:
-            ok, frame = cap.read()
+        ok, frame = test_cap.read()
 
-            if not ok or frame is None:
-                break
+        if not ok or frame is None:
+            raise HTTPException(status_code=400, detail="Cannot read video frame")
 
-            ok, encoded = cv2.imencode(".jpg", frame)
-
-            if not ok:
-                continue
-
-            frame_bytes = encoded.tobytes()
-
-            yield (
-                b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n"
-                b"Cache-Control: no-cache\r\n\r\n"
-                + frame_bytes
-                + b"\r\n"
-            )
     finally:
-        cap.release()
+        test_cap.release()
 
         if temp_source_path is not None:
             try:
@@ -1100,14 +1269,25 @@ def mjpeg_frame_generator(source: str):
             except Exception:
                 pass
 
+    return StreamingResponse(
+        mjpeg_frame_generator(str(video_path), loop=True, fps=15.0),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
 
 @router.get("/parkings/{parking_id}/camera-stream.mjpg")
 def view_camera_stream(
     parking_id: str,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
-    token: str = Query(...),
+    token: str | None = Query(default=None),
 ):
-    current_user = get_user_from_query_token(token, db)
+    current_user = get_user_from_header_or_query_token(request, db, token)
     parking = resolve_parking(parking_id, db, current_user)
     camera = get_source_camera_or_404(db, parking)
 
@@ -1117,10 +1297,31 @@ def view_camera_stream(
     if not camera.source_url:
         raise HTTPException(status_code=404, detail="RTSP URL is not configured")
 
+    test_cap, temp_source_path = open_video_capture_unicode_safe(camera.source_url)
+
+    try:
+        if not test_cap.isOpened():
+            raise HTTPException(status_code=400, detail="Cannot open RTSP stream")
+
+    finally:
+        test_cap.release()
+
+        if temp_source_path is not None:
+            try:
+                Path(temp_source_path).unlink(missing_ok=True)
+            except Exception:
+                pass
+
     return StreamingResponse(
-        mjpeg_frame_generator(camera.source_url),
+        mjpeg_frame_generator(camera.source_url, loop=False, fps=15.0),
         media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
     )
+
 
 @router.get("/parkings/{parking_id}/debug-frame")
 def get_debug_frame(
