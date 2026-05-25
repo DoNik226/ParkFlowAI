@@ -123,6 +123,7 @@ class ParkingLayoutStorageService:
                     {
                         "parking": layout.get("parking", {}),
                         "camera": layout.get("camera", {}),
+                        "frame_meta": layout.get("frame_meta") or layout.get("frame") or {},
                         "source_type": layout.get("source_type"),
                         "source_path": layout.get("source_path"),
                     },
@@ -500,9 +501,12 @@ class ParkingLayoutStorageService:
         elif "id" not in camera_payload:
             camera_payload["id"] = "default_camera"
 
+        frame_meta = meta.get("frame_meta") or meta.get("frame") or {}
+
         layout = {
             "parking": parking_payload,
             "camera": camera_payload,
+            "frame_meta": frame_meta,
             "calibration": calibration,
             "zones": zones or [],
             "spots": layout_spots,
@@ -888,6 +892,7 @@ class ParkingLayoutStorageService:
         layout = self.build_layout_from_db(parking)
         return {
             "parking": layout["parking"],
+            "frame_meta": layout.get("frame_meta", {}),
             "entrances": layout.get("entrances", []),
             "vertices": layout.get("vertices", []),
             "edges": layout.get("edges", []),

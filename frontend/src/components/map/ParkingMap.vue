@@ -172,6 +172,7 @@ const vertexById = computed(() => {
 
   vertices.value.forEach((vertex) => {
     map.set(vertex.id, vertex)
+    map.set(String(vertex.id), vertex)
   })
 
   return map
@@ -201,7 +202,7 @@ const transform = computed(() => {
 
 const routePoints = computed(() => {
   return props.routePath
-    .map((vertexId) => vertexById.value.get(vertexId))
+    .map((vertexId) => vertexById.value.get(String(vertexId)))
     .filter(Boolean)
 })
 

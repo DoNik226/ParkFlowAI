@@ -193,27 +193,58 @@ def zone_crop_detections(model, frame: np.ndarray, zones: Sequence[Dict[str, obj
     return out
 
 
-def mask_overlap_ratio(frame_shape: Tuple[int, int], poly: np.ndarray, det: Detection) -> float:
+def mask_overlap_ratios(frame_shape: Tuple[int, int], poly: np.ndarray, det: Detection) -> Tuple[float, float]:
+    """
+    Возвращает две метрики пересечения:
+    1) bbox_overlap_ratio = intersection / bbox_area
+    2) spot_overlap_ratio = intersection / spot_polygon_area
+
+    Первая метрика показывает, какая часть bbox попала в место.
+    Вторая метрика показывает, насколько само место закрыто bbox.
+    """
     height, width = frame_shape[:2]
+
     x1 = max(0, int(math.floor(det.x1)))
     y1 = max(0, int(math.floor(det.y1)))
     x2 = min(width, int(math.ceil(det.x2)))
     y2 = min(height, int(math.ceil(det.y2)))
+
     if x2 <= x1 or y2 <= y1:
-        return 0.0
+        return 0.0, 0.0
+
     sub_w = x2 - x1
     sub_h = y2 - y1
     bbox_area = float(sub_w * sub_h)
+
     if bbox_area <= 0:
-        return 0.0
+        return 0.0, 0.0
+
     local_poly = poly.copy()
     local_poly[:, 0] -= x1
     local_poly[:, 1] -= y1
+
     mask = np.zeros((sub_h, sub_w), dtype=np.uint8)
     cv2.fillPoly(mask, [local_poly.astype(np.int32)], 255)
-    overlap = float(np.count_nonzero(mask))
-    return overlap / bbox_area
 
+    intersection_area = float(np.count_nonzero(mask))
+    spot_area = float(abs(cv2.contourArea(poly.astype(np.float32))))
+
+    bbox_overlap_ratio = intersection_area / bbox_area if bbox_area > 0 else 0.0
+    spot_overlap_ratio = intersection_area / spot_area if spot_area > 0 else 0.0
+
+    return bbox_overlap_ratio, spot_overlap_ratio
+
+
+def mask_overlap_ratio(frame_shape: Tuple[int, int], poly: np.ndarray, det: Detection) -> float:
+    """
+    Оставлена для совместимости со старым кодом.
+    """
+    bbox_overlap_ratio, _spot_overlap_ratio = mask_overlap_ratios(frame_shape, poly, det)
+    return bbox_overlap_ratio
+
+def mask_overlap_ratio(frame_shape: Tuple[int, int], poly: np.ndarray, det: Detection) -> float:
+    bbox_overlap_ratio, _spot_overlap_ratio = mask_overlap_ratios(frame_shape, poly, det)
+    return bbox_overlap_ratio
 
 def spot_bbox(poly: np.ndarray) -> Tuple[float, float]:
     x, y, w, h = cv2.boundingRect(poly.astype(np.float32))
@@ -226,22 +257,55 @@ def detection_matches_spot(
     det: Detection,
     overlap_threshold: float,
 ) -> Tuple[bool, float]:
+    """
+    Проверяет, можно ли связать bbox автомобиля с конкретным парковочным местом.
+
+    Логика стала строже:
+    - слабые детекции ниже 0.25 не принимаются;
+    - одного попадания центра недостаточно;
+    - требуется пересечение bbox с полигоном места;
+    - score учитывает bbox-overlap, spot-overlap и confidence.
+    """
     bc = det.bottom_center
     c = det.center
 
     bottom_inside = cv2.pointPolygonTest(expanded_poly, bc, False) >= 0
     center_inside = cv2.pointPolygonTest(expanded_poly, c, False) >= 0
-    overlap = mask_overlap_ratio(frame_shape, expanded_poly, det)
 
-    ok = bottom_inside or center_inside or overlap >= overlap_threshold
-    score = (
-        overlap * 1.2
-        + (0.35 if bottom_inside else 0.0)
-        + (0.20 if center_inside else 0.0)
-        + det.confidence * 0.25
+    bbox_overlap, spot_overlap = mask_overlap_ratios(
+        frame_shape=frame_shape,
+        poly=expanded_poly,
+        det=det,
     )
-    return ok, score
 
+    min_confidence = 0.25
+    point_overlap_threshold = max(0.08, overlap_threshold * 0.5)
+
+    strong_overlap = (
+        bbox_overlap >= overlap_threshold
+        and spot_overlap >= 0.08
+    )
+
+    point_supported_overlap = (
+        det.confidence >= 0.35
+        and (bottom_inside or center_inside)
+        and bbox_overlap >= point_overlap_threshold
+    )
+
+    ok = (
+        det.confidence >= min_confidence
+        and (strong_overlap or point_supported_overlap)
+    )
+
+    score = (
+        bbox_overlap * 1.4
+        + spot_overlap * 1.0
+        + (0.20 if bottom_inside else 0.0)
+        + (0.10 if center_inside else 0.0)
+        + det.confidence * 0.35
+    )
+
+    return ok, score
 
 def build_occupancy(layout: Dict[str, object], detections: Sequence[Detection], source_path: str, frame_index: int,
                     timestamp_sec: float, args: argparse.Namespace, frame_shape: Tuple[int, int]) -> Dict[str, object]:

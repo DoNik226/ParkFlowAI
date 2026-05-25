@@ -159,7 +159,7 @@ def build_detector_config(db: Session, parking, active: bool) -> dict:
         "interval_sec": 1.0,
         "loop_video": source_type == CameraSourceType.VIDEO.value,
         "is_live": source_type == CameraSourceType.RTSP.value,
-        "conf": 0.10,
+        "conf": 0.25,
         "imgsz": 640,
     }
 

@@ -8,7 +8,7 @@ from back.app.core.config import (
 
 )
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 240 
 
 
 def hash_password(password: str) -> str:

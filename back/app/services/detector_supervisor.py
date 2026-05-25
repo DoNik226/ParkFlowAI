@@ -241,12 +241,12 @@ def normalize_layout_for_detector(layout: dict) -> dict:
 def make_detection_args(config: dict) -> SimpleNamespace:
     return SimpleNamespace(
         model=config.get("model", "/app/models/best.pt"),
-        conf=float(config.get("conf", 0.20)),
+        conf=float(config.get("conf", 0.25)),
         imgsz=int(config.get("imgsz", 640)),
         crop_pad=int(config.get("crop_pad", 120)),
         spot_margin_px=float(config.get("spot_margin_px", 0.0)),
-        spot_margin_m=float(config.get("spot_margin_m", 0.35)),
-        overlap_threshold=float(config.get("overlap_threshold", 0.06)),
+        spot_margin_m=float(config.get("spot_margin_m", 0.0)),
+        overlap_threshold=float(config.get("overlap_threshold", 0.18)),
         nms_iou=float(config.get("nms_iou", 0.50)),
         interval_sec=float(config.get("interval_sec", 2.0)),
         no_zone_crops=bool(config.get("no_zone_crops", False)),

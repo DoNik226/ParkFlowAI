@@ -29,22 +29,6 @@
         передний левый → передний правый → задний правый → задний левый.
       </div>
 
-      <div v-if="backgroundType === 'video'" class="video-controls">
-        <div class="section-title">Фон разметки</div>
-
-        <button class="btn" type="button" @click="toggleVideoPlayback">
-          {{ backgroundPlaying ? 'Пауза видео' : 'Пуск видео' }}
-        </button>
-
-        <button class="btn" type="button" @click="seekVideoToStart">
-          В начало видео
-        </button>
-
-        <div class="hint">
-          Размечай места на паузе. Координаты будут сохранены по реальному размеру видео.
-        </div>
-      </div>
-
       <hr>
 
       <div class="section-title">
@@ -75,6 +59,22 @@
 
         <button class="btn danger" @click="deleteSelectedZone">
           Удалить зону
+        </button>
+      </div>
+
+      <div v-if="selectedSpotInfo" class="edit-zone">
+        <div class="section-title">Выбранное место</div>
+
+        <div class="selected-spot-title">
+          {{ selectedSpotInfo.label }}
+        </div>
+
+        <div class="hint">
+          Потяни синие точки выбранного места, чтобы вручную подогнать его границы под реальную разметку.
+        </div>
+
+        <button class="btn" @click="resetSelectedSpotPolygon">
+          Сбросить место к сетке
         </button>
       </div>
 
@@ -139,7 +139,7 @@
       />
 
       <div v-if="!imageLoaded && !loading" class="empty">
-        Фон для разметки не найден. Загрузите тестовое видео или получите/загрузите скриншот на странице настройки парковки.
+        Скриншот не найден. Сначала загрузите или получите скриншот на странице настройки парковки.
       </div>
 
       <div v-if="loading" class="empty">
@@ -178,17 +178,14 @@ const image = ref(null)
 const imageLoaded = ref(false)
 const imageObjectUrl = ref('')
 
-const backgroundType = ref('snapshot')
-const backgroundPlaying = ref(false)
-const videoElement = ref(null)
-
-let renderFrameHandle = null
-
 const zones = ref([])
 const selectedZoneId = ref(null)
 
 const addMode = ref(false)
 const addPoints = ref([])
+
+const selectedSpotKey = ref(null)
+const spotOverrides = ref({})
 
 // const newZoneCols = ref(5)
 // const newZoneRows = ref(1)
@@ -199,8 +196,15 @@ const offsetY = ref(0)
 
 const isPanning = ref(false)
 const isDraggingPoint = ref(false)
+const isDraggingSpotPoint = ref(false)
+
 const dragging = ref({
   zoneId: null,
+  pointIndex: -1,
+})
+
+const draggingSpot = ref({
+  key: null,
   pointIndex: -1,
 })
 
@@ -213,6 +217,33 @@ const selectedZone = computed(() => {
   return zones.value.find((zone) => zone.id === selectedZoneId.value) || null
 })
 
+const selectedSpotInfo = computed(() => {
+  if (!selectedSpotKey.value) return null
+
+  for (const zone of zones.value) {
+    const rows = Math.max(1, Number(zone.rows) || 1)
+    const cols = Math.max(1, Number(zone.cols) || 1)
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const key = makeSpotKey(zone.id, row, col)
+
+        if (key === selectedSpotKey.value) {
+          return {
+            key,
+            zone,
+            row,
+            col,
+            label: `Зона ${zones.value.indexOf(zone) + 1}, ряд ${row + 1}, место ${col + 1}`,
+          }
+        }
+      }
+    }
+  }
+
+  return null
+})
+
 const spotsCount = computed(() => {
   return zones.value.reduce((sum, zone) => {
     return sum + Number(zone.cols || 0) * Number(zone.rows || 0)
@@ -220,9 +251,10 @@ const spotsCount = computed(() => {
 })
 
 const modeText = computed(() => {
-  if (!imageLoaded.value) return 'Фон разметки не загружен'
+  if (!imageLoaded.value) return 'Скриншот не загружен'
   if (addMode.value) return `Добавление зоны: точка ${addPoints.value.length + 1} из 4`
-  if (selectedZone.value) return 'Выбрана зона. Можно двигать углы. Клик по пустому месту снимает выделение.'
+  if (selectedSpotInfo.value) return 'Выбрано место. Можно двигать его вершины вручную.'
+  if (selectedZone.value) return 'Выбрана зона. Можно двигать углы. Клик по месту выбирает его для ручной корректировки.'
   return 'Режим просмотра. Колесо — масштаб, ЛКМ по пустому месту — перемещение.'
 })
 
@@ -249,7 +281,7 @@ async function loadEditor() {
     parkingName.value = parking.value.name
 
     await loadExistingLayout()
-    await loadBackgroundMedia()
+    await loadSnapshotImage()
 
     await nextTick()
     resizeCanvas()
@@ -267,182 +299,43 @@ async function loadExistingLayout() {
   try {
     const layout = await parkingService.getLayout(parkingId)
 
-    if (Array.isArray(layout.zones)) {
-      zones.value = layout.zones.map((zone, index) => ({
-        id: zone.id || `zone_${index + 1}`,
-        corners: normalizeCorners(zone.corners || zone.polygon || []),
-        cols: Number(zone.cols || 1),
-        rows: Number(zone.rows || 1),
-      }))
+    const loadedZones = Array.isArray(layout.zones)
+      ? layout.zones.map((zone, index) => ({
+          id: zone.id || `zone_${index + 1}`,
+          corners: normalizeCorners(zone.corners || zone.polygon || []),
+          cols: Number(zone.cols || 1),
+          rows: Number(zone.rows || 1),
+        }))
+      : []
+
+    zones.value = loadedZones
+
+    const overrides = {}
+
+    if (Array.isArray(layout.spots)) {
+      layout.spots.forEach((spot) => {
+        const zoneId = spot.zone_id || spot.zoneId
+        const row = Number(spot.row || 1) - 1
+        const col = Number(spot.col || 1) - 1
+        const polygon = normalizeCorners(spot.polygon || spot.corners || [])
+
+        if (!zoneId || row < 0 || col < 0 || polygon.length !== 4) {
+          return
+        }
+
+        overrides[makeSpotKey(zoneId, row, col)] = polygon
+      })
     }
+
+    spotOverrides.value = overrides
   } catch {
     zones.value = []
+    spotOverrides.value = {}
   }
-}
-
-
-function getCurrentCamera() {
-  if (parking.value?.camera) {
-    return parking.value.camera
-  }
-
-  if (Array.isArray(parking.value?.cameras) && parking.value.cameras.length) {
-    return parking.value.cameras[0]
-  }
-
-  return {
-    source_type: parking.value?.source_type,
-    source_url: parking.value?.source_url,
-    test_video_path: parking.value?.test_video_path,
-  }
-}
-
-function getFrameWidth() {
-  if (!image.value) return 0
-
-  if (backgroundType.value === 'video') {
-    return Number(image.value.videoWidth || 0)
-  }
-
-  return Number(image.value.naturalWidth || 0)
-}
-
-function getFrameHeight() {
-  if (!image.value) return 0
-
-  if (backgroundType.value === 'video') {
-    return Number(image.value.videoHeight || 0)
-  }
-
-  return Number(image.value.naturalHeight || 0)
-}
-
-async function loadBackgroundMedia() {
-  const camera = getCurrentCamera()
-  const sourceType = String(camera?.source_type || '').toLowerCase()
-  const hasVideo = Boolean(camera?.test_video_path || parking.value?.test_video_path)
-
-  if (sourceType === 'video' && hasVideo) {
-    try {
-      await loadVideoBackground()
-      return
-    } catch (err) {
-      console.warn('Не удалось загрузить видео как фон разметки, пробую snapshot:', err)
-    }
-  }
-
-  await loadSnapshotImage()
-}
-
-async function loadVideoBackground() {
-  stopVideoRenderLoop()
-
-  const video = document.createElement('video')
-  video.src = parkingService.getSourceVideoUrl(parkingId)
-  video.muted = true
-  video.loop = true
-  video.playsInline = true
-  video.preload = 'auto'
-
-  await new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      reject(new Error('Video loading timeout'))
-    }, 12000)
-
-    video.onloadedmetadata = () => {
-      window.clearTimeout(timeout)
-
-      if (!video.videoWidth || !video.videoHeight) {
-        reject(new Error('Video metadata is empty'))
-        return
-      }
-
-      resolve()
-    }
-
-    video.onerror = () => {
-      window.clearTimeout(timeout)
-      reject(new Error('Cannot load video'))
-    }
-
-    video.load()
-  })
-
-  try {
-    video.currentTime = 0.001
-    await new Promise((resolve) => {
-      video.onseeked = resolve
-      window.setTimeout(resolve, 400)
-    })
-  } catch {
-    // Если браузер не дал сделать seek до первого кадра, всё равно используем video.
-  }
-
-  image.value = video
-  videoElement.value = video
-  backgroundType.value = 'video'
-  backgroundPlaying.value = false
-  imageLoaded.value = true
-
-  render()
-}
-
-function startVideoRenderLoop() {
-  stopVideoRenderLoop()
-
-  const loop = () => {
-    render()
-    renderFrameHandle = window.requestAnimationFrame(loop)
-  }
-
-  renderFrameHandle = window.requestAnimationFrame(loop)
-}
-
-function stopVideoRenderLoop() {
-  if (renderFrameHandle) {
-    window.cancelAnimationFrame(renderFrameHandle)
-    renderFrameHandle = null
-  }
-}
-
-async function toggleVideoPlayback() {
-  if (backgroundType.value !== 'video' || !videoElement.value) return
-
-  if (backgroundPlaying.value) {
-    videoElement.value.pause()
-    backgroundPlaying.value = false
-    stopVideoRenderLoop()
-    render()
-    return
-  }
-
-  try {
-    await videoElement.value.play()
-    backgroundPlaying.value = true
-    startVideoRenderLoop()
-  } catch (err) {
-    console.warn('Не удалось запустить видео в редакторе:', err)
-    showError('Не удалось запустить видео в редакторе')
-  }
-}
-
-function seekVideoToStart() {
-  if (backgroundType.value !== 'video' || !videoElement.value) return
-
-  videoElement.value.pause()
-  backgroundPlaying.value = false
-  stopVideoRenderLoop()
-  videoElement.value.currentTime = 0
-  render()
 }
 
 async function loadSnapshotImage() {
   try {
-    stopVideoRenderLoop()
-    backgroundPlaying.value = false
-    backgroundType.value = 'snapshot'
-    videoElement.value = null
-
     const blob = await parkingService.getSnapshotBlob(parkingId)
 
     if (imageObjectUrl.value) {
@@ -476,6 +369,33 @@ function normalizeCorners(points) {
   }))
 }
 
+
+function getCurrentCamera() {
+  if (parking.value?.camera) {
+    return parking.value.camera
+  }
+
+  if (Array.isArray(parking.value?.cameras) && parking.value.cameras.length) {
+    return parking.value.cameras[0]
+  }
+
+  return {
+    source_type: parking.value?.source_type,
+    source_url: parking.value?.source_url,
+    test_video_path: parking.value?.test_video_path,
+  }
+}
+
+function getFrameWidth() {
+  if (!image.value) return 0
+  return Number(image.value.naturalWidth || image.value.videoWidth || 0)
+}
+
+function getFrameHeight() {
+  if (!image.value) return 0
+  return Number(image.value.naturalHeight || image.value.videoHeight || 0)
+}
+
 function resizeCanvas() {
   const canvas = canvasRef.value
   const wrap = canvasWrapRef.value
@@ -490,15 +410,17 @@ function resizeCanvas() {
 
 function fitImageToCanvas() {
   const canvas = canvasRef.value
-  if (!canvas || !image.value) return
+  const img = image.value
+
+  if (!canvas || !img) return
 
   const padding = 40
 
   const availableWidth = Math.max(100, canvas.width - padding * 2)
   const availableHeight = Math.max(100, canvas.height - padding * 2)
 
-  const imageWidth = getFrameWidth()
-  const imageHeight = getFrameHeight()
+  const imageWidth = img.naturalWidth
+  const imageHeight = img.naturalHeight
 
   const fitScale = Math.min(
     availableWidth / imageWidth,
@@ -552,54 +474,54 @@ function render() {
 function drawZone(ctx, zone, index) {
   const grid = buildZoneGrid(zone)
   const selected = selectedZoneId.value === zone.id
+  const rows = Math.max(1, Number(zone.rows) || 1)
+  const cols = Math.max(1, Number(zone.cols) || 1)
 
   ctx.save()
 
-  for (let row = 0; row < zone.rows; row++) {
-    for (let col = 0; col < zone.cols; col++) {
-      const tl = grid[row][col]
-      const tr = grid[row][col + 1]
-      const br = grid[row + 1][col + 1]
-      const bl = grid[row + 1][col]
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const key = makeSpotKey(zone.id, row, col)
+      const polygon = getSpotPolygon(zone, row, col, grid)
+      const spotSelected = selectedSpotKey.value === key
 
       ctx.beginPath()
-      ctx.moveTo(tl.x, tl.y)
-      ctx.lineTo(tr.x, tr.y)
-      ctx.lineTo(br.x, br.y)
-      ctx.lineTo(bl.x, bl.y)
+      ctx.moveTo(polygon[0].x, polygon[0].y)
+
+      for (let i = 1; i < polygon.length; i += 1) {
+        ctx.lineTo(polygon[i].x, polygon[i].y)
+      }
+
       ctx.closePath()
 
-      ctx.fillStyle = selected
-        ? 'rgba(255, 193, 7, 0.15)'
-        : 'rgba(33, 150, 243, 0.12)'
+      ctx.fillStyle = spotSelected
+        ? 'rgba(255, 193, 7, 0.25)'
+        : selected
+          ? 'rgba(255, 193, 7, 0.13)'
+          : 'rgba(33, 150, 243, 0.12)'
 
       ctx.fill()
+
+      ctx.strokeStyle = spotSelected ? '#ffc107' : selected ? '#2d8fe3' : 'rgba(45, 143, 227, 0.9)'
+      ctx.lineWidth = spotSelected ? 4 / scale.value : 1.5 / scale.value
+      ctx.stroke()
+
+      if (spotSelected) {
+        polygon.forEach((point, pointIndex) => {
+          ctx.beginPath()
+          ctx.arc(point.x, point.y, 7 / scale.value, 0, Math.PI * 2)
+          ctx.fillStyle = '#38bdf8'
+          ctx.fill()
+          ctx.strokeStyle = '#111827'
+          ctx.lineWidth = 1.5 / scale.value
+          ctx.stroke()
+
+          ctx.fillStyle = '#111827'
+          ctx.font = `bold ${11 / scale.value}px Arial`
+          ctx.fillText(String(pointIndex + 1), point.x + 9 / scale.value, point.y - 9 / scale.value)
+        })
+      }
     }
-  }
-
-  ctx.strokeStyle = selected ? '#ffc107' : '#2d8fe3'
-  ctx.lineWidth = selected ? 3 / scale.value : 2 / scale.value
-
-  for (let col = 0; col <= zone.cols; col++) {
-    ctx.beginPath()
-    ctx.moveTo(grid[0][col].x, grid[0][col].y)
-
-    for (let row = 1; row <= zone.rows; row++) {
-      ctx.lineTo(grid[row][col].x, grid[row][col].y)
-    }
-
-    ctx.stroke()
-  }
-
-  for (let row = 0; row <= zone.rows; row++) {
-    ctx.beginPath()
-    ctx.moveTo(grid[row][0].x, grid[row][0].y)
-
-    for (let col = 1; col <= zone.cols; col++) {
-      ctx.lineTo(grid[row][col].x, grid[row][col].y)
-    }
-
-    ctx.stroke()
   }
 
   zone.corners.forEach((point, pointIndex) => {
@@ -656,6 +578,58 @@ function drawAddingPreview(ctx) {
   }
 
   ctx.restore()
+}
+
+
+function makeSpotKey(zoneId, row, col) {
+  return `${zoneId}__${row + 1}__${col + 1}`
+}
+
+function clonePolygon(points) {
+  return points.map((point) => ({
+    x: Number(point.x),
+    y: Number(point.y),
+  }))
+}
+
+function getDefaultSpotPolygonFromGrid(row, col, grid) {
+  return [
+    grid[row][col],
+    grid[row][col + 1],
+    grid[row + 1][col + 1],
+    grid[row + 1][col],
+  ].map((point) => ({
+    x: Number(point.x),
+    y: Number(point.y),
+  }))
+}
+
+function getSpotPolygon(zone, row, col, grid = null) {
+  const key = makeSpotKey(zone.id, row, col)
+  const overridden = spotOverrides.value[key]
+
+  if (Array.isArray(overridden) && overridden.length === 4) {
+    return clonePolygon(overridden)
+  }
+
+  const sourceGrid = grid || buildZoneGrid(zone)
+  return getDefaultSpotPolygonFromGrid(row, col, sourceGrid)
+}
+
+function setSpotOverride(key, polygon) {
+  spotOverrides.value = {
+    ...spotOverrides.value,
+    [key]: polygon.map((point) => ({
+      x: round(point.x),
+      y: round(point.y),
+    })),
+  }
+}
+
+function deleteSpotOverride(key) {
+  const next = { ...spotOverrides.value }
+  delete next[key]
+  spotOverrides.value = next
 }
 
 function buildZoneGrid(zone) {
@@ -740,10 +714,26 @@ function onMouseDown(event) {
     return
   }
 
+  const spotCornerHit = findSpotCornerHit(point)
+
+  if (spotCornerHit) {
+    selectedZoneId.value = spotCornerHit.zone.id
+    selectedSpotKey.value = spotCornerHit.key
+    isDraggingSpotPoint.value = true
+    draggingSpot.value = {
+      key: spotCornerHit.key,
+      pointIndex: spotCornerHit.pointIndex,
+    }
+
+    render()
+    return
+  }
+
   const hit = findCornerHit(point)
 
   if (hit) {
     selectedZoneId.value = hit.zone.id
+    selectedSpotKey.value = null
     isDraggingPoint.value = true
     dragging.value = {
       zoneId: hit.zone.id,
@@ -754,17 +744,27 @@ function onMouseDown(event) {
     return
   }
 
-  const zone = findZoneHit(point)
+  const spotHit = findSpotHit(point)
 
-  if (zone) {
-    selectedZoneId.value = zone.id
+  if (spotHit) {
+    selectedZoneId.value = spotHit.zone.id
+    selectedSpotKey.value = spotHit.key
     render()
     return
   }
 
-  // Клик по пустому месту снимает выделение зоны
-  if (selectedZoneId.value) {
+  const zone = findZoneHit(point)
+
+  if (zone) {
+    selectedZoneId.value = zone.id
+    selectedSpotKey.value = null
+    render()
+    return
+  }
+
+  if (selectedZoneId.value || selectedSpotKey.value) {
     selectedZoneId.value = null
+    selectedSpotKey.value = null
     render()
   }
 
@@ -777,6 +777,21 @@ function onMouseDown(event) {
 
 function onMouseMove(event) {
   if (!imageLoaded.value) return
+
+  if (isDraggingSpotPoint.value) {
+    const point = screenToImage(event)
+    const hit = findSpotByKey(draggingSpot.value.key)
+
+    if (hit && draggingSpot.value.pointIndex >= 0) {
+      const grid = buildZoneGrid(hit.zone)
+      const polygon = getSpotPolygon(hit.zone, hit.row, hit.col, grid)
+      polygon[draggingSpot.value.pointIndex] = point
+      setSpotOverride(hit.key, polygon)
+      render()
+    }
+
+    return
+  }
 
   if (isDraggingPoint.value) {
     const point = screenToImage(event)
@@ -809,10 +824,102 @@ function onMouseMove(event) {
 function onMouseUp() {
   isPanning.value = false
   isDraggingPoint.value = false
+  isDraggingSpotPoint.value = false
   dragging.value = {
     zoneId: null,
     pointIndex: -1,
   }
+  draggingSpot.value = {
+    key: null,
+    pointIndex: -1,
+  }
+}
+
+function findSpotByKey(key) {
+  if (!key) return null
+
+  for (const zone of zones.value) {
+    const rows = Math.max(1, Number(zone.rows) || 1)
+    const cols = Math.max(1, Number(zone.cols) || 1)
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const spotKey = makeSpotKey(zone.id, row, col)
+
+        if (spotKey === key) {
+          return {
+            key: spotKey,
+            zone,
+            row,
+            col,
+          }
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+function findSpotCornerHit(point) {
+  const radius = 12 / scale.value
+
+  for (const zone of [...zones.value].reverse()) {
+    const grid = buildZoneGrid(zone)
+    const rows = Math.max(1, Number(zone.rows) || 1)
+    const cols = Math.max(1, Number(zone.cols) || 1)
+
+    for (let row = rows - 1; row >= 0; row -= 1) {
+      for (let col = cols - 1; col >= 0; col -= 1) {
+        const key = makeSpotKey(zone.id, row, col)
+        const polygon = getSpotPolygon(zone, row, col, grid)
+
+        for (let pointIndex = 0; pointIndex < polygon.length; pointIndex += 1) {
+          const corner = polygon[pointIndex]
+          const dx = point.x - corner.x
+          const dy = point.y - corner.y
+
+          if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+            return {
+              key,
+              zone,
+              row,
+              col,
+              pointIndex,
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+function findSpotHit(point) {
+  for (const zone of [...zones.value].reverse()) {
+    const grid = buildZoneGrid(zone)
+    const rows = Math.max(1, Number(zone.rows) || 1)
+    const cols = Math.max(1, Number(zone.cols) || 1)
+
+    for (let row = rows - 1; row >= 0; row -= 1) {
+      for (let col = cols - 1; col >= 0; col -= 1) {
+        const key = makeSpotKey(zone.id, row, col)
+        const polygon = getSpotPolygon(zone, row, col, grid)
+
+        if (pointInPolygon(point, polygon)) {
+          return {
+            key,
+            zone,
+            row,
+            col,
+          }
+        }
+      }
+    }
+  }
+
+  return null
 }
 
 function findCornerHit(point) {
@@ -849,17 +956,18 @@ function findZoneHit(point) {
 function pointInPolygon(point, polygon) {
   let inside = false
 
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
     const xi = polygon[i].x
     const yi = polygon[i].y
     const xj = polygon[j].x
     const yj = polygon[j].y
 
-    const intersect =
-      yi > point.y !== yj > point.y &&
-      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi
+    const intersect = ((yi > point.y) !== (yj > point.y)) &&
+      (point.x < ((xj - xi) * (point.y - yi)) / ((yj - yi) || 1e-9) + xi)
 
-    if (intersect) inside = !inside
+    if (intersect) {
+      inside = !inside
+    }
   }
 
   return inside
@@ -911,6 +1019,7 @@ function finishAddingZone() {
 
   zones.value.push(zone)
   selectedZoneId.value = zone.id
+  selectedSpotKey.value = null
   addMode.value = false
   addPoints.value = []
 
@@ -919,6 +1028,7 @@ function finishAddingZone() {
 
 function selectZone(zoneId) {
   selectedZoneId.value = zoneId
+  selectedSpotKey.value = null
   addMode.value = false
   addPoints.value = []
   render()
@@ -927,8 +1037,26 @@ function selectZone(zoneId) {
 function deleteSelectedZone() {
   if (!selectedZone.value) return
 
-  zones.value = zones.value.filter((zone) => zone.id !== selectedZone.value.id)
+  const zoneId = selectedZone.value.id
+  zones.value = zones.value.filter((zone) => zone.id !== zoneId)
+
+  const nextOverrides = { ...spotOverrides.value }
+  Object.keys(nextOverrides).forEach((key) => {
+    if (key.startsWith(`${zoneId}__`)) {
+      delete nextOverrides[key]
+    }
+  })
+  spotOverrides.value = nextOverrides
+
   selectedZoneId.value = null
+  selectedSpotKey.value = null
+  render()
+}
+
+function resetSelectedSpotPolygon() {
+  if (!selectedSpotKey.value) return
+
+  deleteSpotOverride(selectedSpotKey.value)
   render()
 }
 
@@ -957,12 +1085,7 @@ function buildLayoutPayload() {
 
     for (let row = 0; row < normalizedZone.rows; row += 1) {
       for (let col = 0; col < normalizedZone.cols; col += 1) {
-        const polygon = [
-          grid[row][col],
-          grid[row][col + 1],
-          grid[row + 1][col + 1],
-          grid[row + 1][col],
-        ].map((point) => ({
+        const polygon = getSpotPolygon(normalizedZone, row, col, grid).map((point) => ({
           x: round(point.x),
           y: round(point.y),
         }))
@@ -1055,11 +1178,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', resizeCanvas)
-  stopVideoRenderLoop()
-
-  if (videoElement.value) {
-    videoElement.value.pause()
-  }
 
   if (imageObjectUrl.value) {
     URL.revokeObjectURL(imageObjectUrl.value)
@@ -1223,13 +1341,11 @@ hr {
   margin-bottom: 10px;
 }
 
-.video-controls {
-  display: grid;
-  gap: 8px;
-}
-
-.video-controls .hint {
-  margin-bottom: 8px;
+.selected-spot-title {
+  margin-bottom: 10px;
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 14px;
 }
 
 .stats {
@@ -1463,13 +1579,11 @@ hr {
   margin-bottom: 10px;
 }
 
-.video-controls {
-  display: grid;
-  gap: 8px;
-}
-
-.video-controls .hint {
-  margin-bottom: 8px;
+.selected-spot-title {
+  margin-bottom: 10px;
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 14px;
 }
 
 .stats {

@@ -435,7 +435,7 @@ const freeSpots = computed(() => {
 const selectedEntranceVertexId = computed(() => {
   const entrance = entrances.value.find((item) => {
     if (typeof item === 'string') {
-      return item === selectedEntrance.value
+      return String(item) === String(selectedEntrance.value)
     }
 
     return String(item.id) === String(selectedEntrance.value)
@@ -445,7 +445,9 @@ const selectedEntranceVertexId = computed(() => {
     return null
   }
 
-  return entrance.vertex_id || entrance.id || null
+  const vertexId = entrance.vertex_id || entrance.id
+
+  return vertexId ? String(vertexId) : null
 })
 
 function goAdminHome() {
@@ -703,7 +705,10 @@ function buildRouteForSelected() {
   }
 
   const targetVertex = mapData.value.vertices.find((vertex) => {
-    return vertex.type === 'spot_access' && vertex.spot_id === selectedSpot.value.id
+    return (
+      String(vertex.type) === 'spot_access' &&
+      String(vertex.spot_id) === String(selectedSpot.value.id)
+    )
   })
 
   if (!targetVertex) {
@@ -727,17 +732,28 @@ function buildRouteForSelected() {
 }
 
 function findShortestPath(vertices, edges, startId, targetId) {
-  const vertexIds = vertices.map((vertex) => vertex.id)
+  const vertexIds = vertices.map((vertex) => String(vertex.id))
   const distances = new Map()
   const previous = new Map()
   const unvisited = new Set(vertexIds)
+
+  const normalizedStartId = String(startId)
+  const normalizedTargetId = String(targetId)
 
   vertexIds.forEach((id) => {
     distances.set(id, Number.POSITIVE_INFINITY)
     previous.set(id, null)
   })
 
-  distances.set(startId, 0)
+  if (!unvisited.has(normalizedStartId)) {
+    return []
+  }
+
+  if (!unvisited.has(normalizedTargetId)) {
+    return []
+  }
+
+  distances.set(normalizedStartId, 0)
 
   while (unvisited.size) {
     let currentId = null
@@ -756,7 +772,7 @@ function findShortestPath(vertices, edges, startId, targetId) {
       break
     }
 
-    if (currentId === targetId) {
+    if (currentId === normalizedTargetId) {
       break
     }
 
@@ -765,25 +781,27 @@ function findShortestPath(vertices, edges, startId, targetId) {
     const neighbors = getNeighbors(currentId, edges)
 
     neighbors.forEach((neighbor) => {
-      if (!unvisited.has(neighbor.id)) {
+      const neighborId = String(neighbor.id)
+
+      if (!unvisited.has(neighborId)) {
         return
       }
 
       const nextDistance = currentDistance + neighbor.weight
 
-      if (nextDistance < distances.get(neighbor.id)) {
-        distances.set(neighbor.id, nextDistance)
-        previous.set(neighbor.id, currentId)
+      if (nextDistance < distances.get(neighborId)) {
+        distances.set(neighborId, nextDistance)
+        previous.set(neighborId, currentId)
       }
     })
   }
 
-  if (distances.get(targetId) === Number.POSITIVE_INFINITY) {
+  if (distances.get(normalizedTargetId) === Number.POSITIVE_INFINITY) {
     return []
   }
 
   const path = []
-  let current = targetId
+  let current = normalizedTargetId
 
   while (current) {
     path.unshift(current)
@@ -795,20 +813,23 @@ function findShortestPath(vertices, edges, startId, targetId) {
 
 function getNeighbors(vertexId, edges) {
   const neighbors = []
+  const normalizedVertexId = String(vertexId)
 
   edges.forEach((edge) => {
-    const weight = Number(edge.length_meters) || 1
+    const source = String(edge.source ?? edge.from ?? edge.source_id ?? '')
+    const destination = String(edge.destination ?? edge.to ?? edge.destination_id ?? '')
+    const weight = Number(edge.length_meters ?? edge.weight ?? edge.distance ?? 1) || 1
 
-    if (edge.source === vertexId) {
+    if (source === normalizedVertexId && destination) {
       neighbors.push({
-        id: edge.destination,
+        id: destination,
         weight,
       })
     }
 
-    if (edge.is_bidirectional !== false && edge.destination === vertexId) {
+    if (edge.is_bidirectional !== false && destination === normalizedVertexId && source) {
       neighbors.push({
-        id: edge.source,
+        id: source,
         weight,
       })
     }
